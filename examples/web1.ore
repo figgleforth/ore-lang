@@ -1,5 +1,5 @@
-#load 'ore/html.ore'
-#load 'ore/server.ore'
+#use 'ore/html.ore'
+#use 'ore/server.ore'
 
 Heading | H2 {
 	css_background_color = 'blue'

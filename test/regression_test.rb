@@ -361,4 +361,33 @@ class Regression_Test < Base_Test
 		CODE
 		assert_equal [1, 2, 3], out.values
 	end
+
+	def test_broken_static_declarations
+		refute_raises Ore::Missing_Super_Proxy_Declaration do
+			Ore.interp <<~ORE
+			    Thing {
+			    	../abc;
+			    	../def {;}
+			    }
+
+			    	Thing.abc
+			ORE
+		end
+
+		assert_raises Ore::Database_Not_Set_For_Record_Instance do
+			Ore.interp <<~ORE
+			    #use 'ore/record.ore'
+
+			    Record.find(1)
+			ORE
+		end
+	end
+
+	def test_commented_closing_brace_causing_infinite_loop
+		Ore.interp <<~ORE
+		    Thing {
+		    `}
+		    }
+		ORE
+	end
 end

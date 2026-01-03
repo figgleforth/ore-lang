@@ -1,11 +1,11 @@
 Dictionary {
-	keys {; #intrinsic }
-	values {; #intrinsic }
-	has_key? { key; #intrinsic }
-	delete { key; #intrinsic }
-	merge { other; #intrinsic }
-	count {; #intrinsic }
-	empty? {; #intrinsic }
-	clear {; #intrinsic }
-	fetch { key, default; #intrinsic }
+	keys {; #super }
+	values {; #super }
+	has_key? { key; #super }
+	delete { key; #super }
+	merge { other; #super }
+	count {; #super }
+	empty? {; #super }
+	clear {; #super }
+	fetch { key, default; #super }
 }

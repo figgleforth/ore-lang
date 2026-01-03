@@ -1,0 +1,103 @@
+#use 'ore/html.ore'
+#use 'ore/database.ore'
+#use 'ore/record.ore'
+#use 'ore/server.ore'
+
+Page_Layout | Html {
+`	css_filter = 'invert()'
+	css_font_size = '1.6em'
+	css_font_family = 'monospace'
+	css_padding = '3.2em'
+
+	render {;
+		[Head(Title("Todos")), Body(children)]
+	}
+}
+
+Single_Todo | Div {
+	todo;
+
+	new { todo = 'New Todo';
+		./todo = todo
+	}
+
+	render {;
+		[A('/', 'Back to all'), Br(), Todo_Item(todo)]
+	}
+}
+
+Todo_Item | Li {
+	id;
+	data;
+
+	new { todo;
+		./data = todo[:text]
+		./id = todo[:id]
+	}
+
+	render {;
+		A("/|id|", "|id|: |data|")
+	}
+}
+
+List_Of_Todos | Ul {
+	todos;
+
+	new { todos = [];
+		./todos = todos
+	}
+
+	render {;
+		todos.map({ it, at;
+			Todo_Item(it)
+		})
+	}
+}
+
+App | Server {
+	port = 80
+
+	todos = []
+
+	new { todos;
+		./todos = todos
+	}
+
+	get:// {;
+		Page_Layout(List_Of_Todos(todos))
+	}
+
+	get://:id { id;
+		todo = todos[id.to_i() - 1]
+		Page_Layout(Single_Todo(todo))
+	}
+}
+
+db = Sqlite('./temp/todo_app.db') `Sqlite composes with Database
+#connect db  `=> calls Database#create_connection!
+
+Todo | Record {
+	../database = ~/db `Must set the database in order for Todo query methods to work
+	table_name = 'todos'
+}
+
+if db.table_exists?('todos')
+	db.delete_table('todos')
+	db.create_table('todos', { id: 'primary_key', text: 'String' })
+end
+
+Todo.create({text: "Make Databases work"})
+Todo.create({text: "Allow reading and writing Records"})
+Todo.create({text: "Show Todos in this app"})
+Todo.create({text: "Implement user authentication"})
+Todo.create({text: "Add dark mode toggle"})
+Todo.create({text: "Write comprehensive documentation"})
+Todo.create({text: "Optimize database queries"})
+Todo.create({text: "Add file upload feature"})
+Todo.create({text: "Create RESTful API endpoints"})
+Todo.create({text: "Build admin dashboard"})
+
+todos = Todo.all()
+app = App(todos)
+
+#start app

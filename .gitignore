@@ -1,5 +1,7 @@
 .idea/
 .zed/
+temp/
+*.db
 *.DS_Store
 */**/*.DS_Store
 .claude/settings.local.json

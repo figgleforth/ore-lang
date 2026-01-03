@@ -103,7 +103,8 @@ Ore uses a sophisticated scope hierarchy:
 - **Html_Element** - HTML element scopes (tracks `@expressions`, `@attributes`, `@types`)
 - **Return** - Return value wrapper (tracks `@value`)
 
-Each scope can have **sibling scopes** - additional scopes checked first during identifier lookup, used by the unpack feature.
+Each scope can have **sibling scopes
+** - additional scopes checked first during identifier lookup, used by the unpack feature.
 
 ### Scope Operators
 
@@ -115,7 +116,10 @@ Ore provides three scope operators for explicit scope access:
 
 **Identifier Search Behavior:**
 
-- `identifier` (no operator) - Searches through all scopes in the stack from current to global, including checking for intrinsic methods
+-
+
+`identifier` (no operator) - Searches through all scopes in the stack from current to global, including checking for proxies methods
+
 - `./identifier` - Only searches the current instance scope (does not fall back to global)
 - `../identifier` - Only searches the current type scope
 - `~/identifier` - Only searches the global scope
@@ -207,44 +211,53 @@ x = island_member  `Access members directly
 
 ## Built-in Types and Intrinsic Methods
 
-Ore's built-in types (String, Array, Dictionary, Number) have intrinsic methods that delegate to Ruby's native implementations.
+Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that delegate to Ruby's native implementations. These methods are declared using a
+`proxy_` prefix (see lib/shared/super_proxies.rb)
 
 ### Intrinsic Method Implementation Pattern
 
 **In Ore** (`.ore` files):
+
 ```ore
 String {
-    upcase {; #intrinsic }
-    downcase {; #intrinsic }
+    upcase {; #super }
+    downcase {; #super }
 }
 ```
 
 **In Ruby** (`scopes.rb`):
+
 ```ruby
+
 class String < Instance
-    extend Intrinsic_Methods
+	extend Super_Proxies
 
-    intrinsic_delegate 'value'  # Delegate to @value
-    intrinsic :upcase           # Calls @value.upcase
-    intrinsic :downcase         # Calls @value.downcase
+	proxy_delegate 'value' # Delegate to @value
+	proxy :upcase # Calls @value.upcase
+	proxy :downcase # Calls @value.downcase
 end
 ```
 
-**Custom intrinsic handlers** for methods that need special logic:
+**Custom ruby handlers** for methods that need special logic:
+
 ```ruby
-def intrinsic_concat other_array
-    values.concat other_array.values  # Extract Ruby array first
+
+def proxy_concat other_array
+	values.concat other_array.values # Extract Ruby array first
 end
 ```
 
-**Methods implemented in Ore** (not as Ruby intrinsics):
-Some methods like `find`, `any?`, and `all?` are implemented directly in Ore using for loops rather than Ruby intrinsics, as they need to execute Ore functions.
+**Methods implemented in Ore** (not as Ruby proxies):
+Some methods like `find`, `any?`, and
+`all?` are implemented directly in Ore using for loops rather than Ruby proxies, as they need to execute Ore functions.
 
 ### String
 
 Properties: `length`, `ord`
 
-Methods: `upcase()`, `downcase()`, `split(delimiter)`, `slice(substr)`, `trim()`, `trim_left()`, `trim_right()`, `chars()`, `index(substr)`, `to_i()`, `to_f()`, `empty?()`, `include?(substr)`, `reverse()`, `replace(new)`, `start_with?(prefix)`, `end_with?(suffix)`, `gsub(pattern, replacement)`
+Methods: `upcase()`, `downcase()`, `split(delimiter)`, `slice(substr)`, `trim()`, `trim_left()`, `trim_right()`,
+`chars()`, `index(substr)`, `to_i()`, `to_f()`, `empty?()`, `include?(substr)`, `reverse()`, `replace(new)`,
+`start_with?(prefix)`, `end_with?(suffix)`, `gsub(pattern, replacement)`
 
 Defined in: `ore/string.ore`, implemented in `scopes.rb` as `Ore::String`
 
@@ -252,15 +265,19 @@ Defined in: `ore/string.ore`, implemented in `scopes.rb` as `Ore::String`
 
 Properties: `values`
 
-Methods: `push(item)`, `pop()`, `shift()`, `unshift(item)`, `length()`, `first(count)`, `last(count)`, `slice(from, to)`, `reverse()`, `join(separator)`, `map(func)`, `filter(func)`, `reduce(func, init)`, `concat(other)`, `flatten()`, `sort()`, `uniq()`, `include?(item)`, `empty?()`, `find(func)` *(Ore)*, `any?(func)` *(Ore)*, `all?(func)` *(Ore)*, `each(func)`
+Methods: `push(item)`, `pop()`, `shift()`, `unshift(item)`, `length()`, `first(count)`, `last(count)`,
+`slice(from, to)`, `reverse()`, `join(separator)`, `map(func)`, `filter(func)`, `reduce(func, init)`, `concat(other)`,
+`flatten()`, `sort()`, `uniq()`, `include?(item)`, `empty?()`, `find(func)` *(Ore)*, `any?(func)` *(Ore)*, `all?(func)`
+*(Ore)*, `each(func)`
 
 Defined in: `ore/array.ore`, implemented in `scopes.rb` as `Ore::Array`
 
-**Note:** Methods marked *(Ore)* are implemented in Ore using for loops, not as Ruby intrinsics.
+**Note:** Methods marked *(Ore)* are implemented in Ore using for loops, not as Ruby proxies.
 
 ### Dictionary
 
-Methods: `keys()`, `values()`, `has_key?(key)`, `delete(key)`, `merge(other)`, `count()`, `empty?()`, `clear()`, `fetch(key, default)`
+Methods: `keys()`, `values()`, `has_key?(key)`, `delete(key)`, `merge(other)`, `count()`, `empty?()`, `clear()`,
+`fetch(key, default)`
 
 ```ore
 dict = {x: 4, y: 8}
@@ -273,6 +290,7 @@ dict.count()       `3
 ```
 
 **Features:**
+
 - Symbol, string, or identifier keys
 - Subscript access via `dict[key]`
 - Defined in: `ore/dictionary.ore`, implemented in `scopes.rb` as `Ore::Dictionary`
@@ -281,7 +299,8 @@ dict.count()       `3
 
 Properties: `numerator`, `denominator`, `type`
 
-Methods: `to_s()`, `abs()`, `floor()`, `ceil()`, `round()`, `sqrt()`, `even?()`, `odd?()`, `to_i()`, `to_f()`, `clamp(min, max)`
+Methods: `to_s()`, `abs()`, `floor()`, `ceil()`, `round()`, `sqrt()`, `even?()`, `odd?()`, `to_i()`, `to_f()`,
+`clamp(min, max)`
 
 Defined in: `ore/number.ore`, implemented in `scopes.rb` as `Ore::Number`
 
@@ -343,6 +362,7 @@ find { func;
 ```
 
 **Implementation:**
+
 - `return value` creates an `Ore::Return` object wrapping the value
 - For loops detect `Return` objects and propagate them up to the function
 - Functions unwrap the `Return` object and return the inner value
@@ -365,7 +385,7 @@ Tests use Minitest and inherit from `Base_Test` (in test/base_test.rb):
 - `test/lexer_test.rb` - Lexer tests
 - `test/parser_test.rb` - Parser tests
 - `test/interpreter_test.rb` - Interpreter tests
-- `test/intrinsics_test.rb` - Intrinsic method tests
+- `test/proxies_test.rb` - Super Proxy method tests
 - `test/regression_test.rb` - Regression tests
 - `test/server_test.rb` - Server and routing tests
 - `test/e2e_server_test.rb` - End-to-end server tests
@@ -387,8 +407,8 @@ Ore has built-in web server support:
 
 ## File Loading
 
-The `#load` directive allows importing Ore files:
+The `#use` directive allows importing Ore files:
 
 - Context tracks loaded files to prevent duplicate parsing
-- Files are loaded into specified scope via `Context#load_file`
+- Files are loaded into specified scope via `Runtime#load_file`
 - Expressions are cached in `@loaded_files` hash keyed by resolved filepath

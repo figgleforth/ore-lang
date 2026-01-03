@@ -83,6 +83,7 @@ module Ore
 			super name
 			@types               = Set[name]
 			@static_declarations = Set.new
+			@expressions         = [] # note: Fancy subclasses of this like Ore::Array don't have @expressions therefore fail in places I assume @expressions is an array with some elements. Therefore giving it a default value here.
 		end
 
 		def has? identifier
@@ -97,11 +98,11 @@ module Ore
 	end
 
 	class Func < Scope
-		attr_accessor :expressions, :intrinsic, :static, :arguments
+		attr_accessor :expressions, :static, :arguments
 	end
 
-	class Html_Element < Scope
-		attr_accessor :expressions, :attributes, :types
+	class Html_Element < Instance
+		attr_accessor :expressions, :attributes
 	end
 
 	class Route < Func
@@ -118,7 +119,7 @@ module Ore
 	end
 
 	class String < Instance
-		extend Intrinsic_Methods
+		extend Super_Proxies
 
 		attr_accessor :value
 
@@ -128,27 +129,27 @@ module Ore
 			self['value'] = value
 		end
 
-		intrinsic_delegate 'value'
-		intrinsic :length
-		intrinsic :ord
-		intrinsic :upcase
-		intrinsic :downcase
-		intrinsic :split
-		intrinsic :slice!, as: :slice
-		intrinsic :strip, as: :trim
-		intrinsic :lstrip, as: :trim_left
-		intrinsic :rstrip, as: :trim_right
-		intrinsic :chars
-		intrinsic :index
-		intrinsic :to_i
-		intrinsic :to_f
-		intrinsic :empty?
-		intrinsic :include?
-		intrinsic :reverse
-		intrinsic :replace
-		intrinsic :start_with?
-		intrinsic :end_with?
-		intrinsic :gsub
+		proxy_delegate 'value'
+		proxy :length
+		proxy :ord
+		proxy :upcase
+		proxy :downcase
+		proxy :split
+		proxy :slice!, as: :slice
+		proxy :strip, as: :trim
+		proxy :lstrip, as: :trim_left
+		proxy :rstrip, as: :trim_right
+		proxy :chars
+		proxy :index
+		proxy :to_i
+		proxy :to_f
+		proxy :empty?
+		proxy :include?
+		proxy :reverse
+		proxy :replace
+		proxy :start_with?
+		proxy :end_with?
+		proxy :gsub
 
 		def + other
 			value + other.value
@@ -161,35 +162,40 @@ module Ore
 
 	# note: Be sure to prefix with Ore:: whenever referencing this Array type to prevent ambiguity with Ruby's ::Array!
 	class Array < Instance
-		extend Intrinsic_Methods
+		extend Super_Proxies
 		attr_accessor :values
 
 		def initialize values = []
-			super 'List'
-			@values = values
+			super 'Array'
+			@values                 = values
+			@declarations['values'] = self
 		end
 
-		intrinsic_delegate 'values'
-		intrinsic :push
-		intrinsic :pop
-		intrinsic :shift
-		intrinsic :unshift
-		intrinsic :length
-		intrinsic :first
-		intrinsic :last
-		intrinsic :slice
-		intrinsic :reverse
-		intrinsic :join
-		intrinsic :sort
-		intrinsic :uniq
-		intrinsic :include?
-		intrinsic :empty?
+		proxy_delegate 'values'
+		proxy :push
+		proxy :pop
+		proxy :shift
+		proxy :unshift
+		proxy :length
+		proxy :first
+		proxy :last
+		proxy :slice
+		proxy :reverse
+		proxy :join
+		proxy :sort
+		proxy :uniq
+		proxy :include?
+		proxy :empty?
 
-		def intrinsic_concat other_array
+		def proxy_get index
+			get index
+		end
+
+		def proxy_concat other_array
 			values.concat other_array.values
 		end
 
-		def intrinsic_flatten depth = -1
+		def proxy_flatten depth = -1
 			# Convert Ore::Array objects to Ruby arrays for flattening
 			ruby_array = values.map { |v| v.is_a?(Ore::Array) ? v.values : v }
 			Ore::Array.new ruby_array.flatten depth
@@ -198,10 +204,6 @@ module Ore
 		def get key
 			# note: This is required because Instance extends Scope whose [] method reads from @declarations
 			key.is_a?(Integer) ? values[key] : super
-		end
-
-		def []= key, value
-			values[key] = value
 		end
 
 		def == other
@@ -215,7 +217,7 @@ module Ore
 	end
 
 	class Dictionary < Instance
-		extend Intrinsic_Methods
+		extend Super_Proxies
 		attr_accessor :dict
 
 		def initialize dict = {}
@@ -223,26 +225,27 @@ module Ore
 			@dict = dict
 		end
 
-		intrinsic_delegate 'dict'
-		intrinsic :has_key?
-		intrinsic :delete
-		intrinsic :count
-		intrinsic :keys
-		intrinsic :values
-		intrinsic :empty?
-		intrinsic :clear
-		intrinsic :fetch
+		proxy_delegate 'dict'
+		proxy :has_key?
+		proxy :delete
+		proxy :count
+		proxy :keys
+		proxy :values
+		proxy :empty?
+		proxy :clear
+		proxy :fetch
 
-		def intrinsic_merge other_dict
+		def proxy_merge other_dict
 			dict.merge other_dict.dict
 		end
 
 		def [] key
-			dict[key]
+			dict[key] || declarations[key]
 		end
 
 		def []= key, value
-			dict[key] = value
+			dict[key]         = value
+			declarations[key] = value
 		end
 
 		def == other
@@ -261,7 +264,7 @@ module Ore
 	end
 
 	class Number < Instance
-		extend Intrinsic_Methods
+		extend Super_Proxies
 		attr_accessor :numerator, :denominator, :type
 
 		def + other
@@ -308,26 +311,28 @@ module Ore
 			numerator | other.numerator
 		end
 
-		intrinsic_delegate 'numerator'
-		intrinsic :to_s
-		intrinsic :abs
-		intrinsic :floor
-		intrinsic :ceil
-		intrinsic :round
-		intrinsic :even?
-		intrinsic :odd?
-		intrinsic :to_i
-		intrinsic :to_f
-		intrinsic :clamp
+		proxy_delegate 'numerator'
+		proxy :to_s
+		proxy :abs
+		proxy :floor
+		proxy :ceil
+		proxy :round
+		proxy :even?
+		proxy :odd?
+		proxy :to_i
+		proxy :to_f
+		proxy :clamp
 
-		def intrinsic_sqrt
+		def proxy_sqrt
 			Math.sqrt numerator
 		end
 	end
 
 	class Nil < Scope # Like Ruby's NilClass, this represents the absence of a value.
+		NIL = new()
+
 		def self.shared
-			@instance ||= new
+			NIL
 		end
 
 		private_class_method :new # prevent external instantiation
@@ -337,7 +342,10 @@ module Ore
 		end
 	end
 
-	class Bool < Scope
+	class Bool < Instance
+		TRUE  = new(true)
+		FALSE = new(false)
+
 		attr_accessor :truthiness
 
 		def !
@@ -345,16 +353,16 @@ module Ore
 		end
 
 		def self.truthy
-			@truthy ||= new(true)
+			TRUE
 		end
 
 		def self.falsy
-			@falsy ||= new(false)
+			FALSE
 		end
 
-		private_class_method :new # prevent external instantiation
+		# private_class_method :new # prevent external instantiation
 
-		def initialize truthiness
+		def initialize truthiness = true
 			super((!!truthiness).to_s.capitalize) # Scope class only needs @name
 			@truthiness = !!truthiness
 		end
@@ -363,7 +371,7 @@ module Ore
 	class Range < ::Range
 	end
 
-	class Server < Type
+	class Server < Instance
 		attr_accessor :port, :routes
 
 		def initialize
@@ -408,6 +416,102 @@ module Ore
 			@declarations['status']  = @status
 			@declarations['headers'] = @headers
 			@declarations['body']    = @body_content
+		end
+	end
+
+	class Record < Instance
+		extend Super_Proxies
+
+		def proxy_infer_table_name_from_class!
+			require 'sequel/extensions/inflector.rb'
+			first_type                  = types.to_a.first
+			@declarations['table_name'] = first_type.split('::').last.downcase.pluralize
+		end
+
+		# @return [Ore::Database]
+		def database
+			@declarations['database']
+		end
+
+		# @return [Symbol]
+		def table_name
+			@declarations['table_name']&.to_sym
+		end
+
+		# @return [Sequal::SQLite::Dataset]
+		def table
+			raise Ore::Database_Not_Set_For_Record_Instance unless database
+
+			database['connection'][table_name]
+		end
+
+		def proxy_all
+			Ore::Array.new(table&.all || [])
+		end
+
+		def proxy_find id
+			# todo: Convert this to a Record instance
+			Ore::Dictionary.new table.where(id: id).first
+		end
+
+		def proxy_create ore_dict
+			# todo: Return self, or a hash of the inserted row. By default, table#insert returns the id of the inserted row
+			table.insert ore_dict.dict
+		end
+
+		def proxy_delete id
+			table.where(id: id).delete
+		end
+	end
+
+	class Database < Instance
+		require 'sequel'
+
+		# @return [Sequel::SQLite::Database]
+		attr_accessor :connection
+
+		# Calls Sequel.sqlite with the `url` declaration on this database, and returns the resulting database instance. Caches the database in @database.
+		def create_connection!
+			return @connection if @connection
+
+			url = get 'url'
+			raise Ore::Url_Not_Set_For_Database_Instance unless url
+
+			# Note: As SQLite is a file-based database, the :host and :port options are ignored, and the :database option should be a path to the file — https://sequel.jeremyevans.net/rdoc/files/doc/opening_databases_rdoc.html#label-sqlite
+			db = Sequel.sqlite adapter: 'sqlite', database: url
+
+			@declarations['connection'] = @connection = db
+		end
+
+		def proxy_create_table name, columns_ore_dict
+			return connection[name.to_sym] if proxy_table_exists? name
+
+			connection.create_table name.to_sym do
+				columns_ore_dict.dict.each do |col, type|
+					col = col.to_sym
+
+					case type
+					when 'primary_key'
+						primary_key col
+					when 'String'
+						String col
+					else
+						raise "Metaprogram the rest of these"
+					end
+				end
+			end
+		end
+
+		def proxy_delete_table name
+			connection.drop_table name.to_sym
+		end
+
+		def proxy_table_exists? table_name
+			connection.table_exists? table_name.to_sym
+		end
+
+		def proxy_tables
+			Ore::Array.new connection.tables
 		end
 	end
 end

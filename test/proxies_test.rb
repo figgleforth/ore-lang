@@ -2,14 +2,14 @@ require 'minitest/autorun'
 require_relative '../lib/ore'
 require_relative 'base_test'
 
-class Intrinsics_Test < Base_Test
-	def test_invalid_intrinsic_directive_usage
-		assert_raises Ore::Invalid_Intrinsic_Directive_Usage do
-			Ore.interp '#intrinsic'
+class ProxiesTest < Base_Test
+	def test_invalid_proxy_directive_usage
+		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
+			Ore.interp '#super'
 		end
 	end
 
-	def test_string_intrinsics
+	def test_string_proxies
 		assert_equal 12, Ore.interp("'hello, world'.length")
 		assert_equal 104, Ore.interp("'hello, world'.ord")
 
@@ -48,7 +48,7 @@ class Intrinsics_Test < Base_Test
 		assert_equal 'heyo world', Ore.interp("'hello world'.gsub('hell', 'hey')")
 	end
 
-	def test_array_intrinsics
+	def test_array_proxies
 		out = Ore.interp <<~ORE
 		    x = [1, 2, 3]
 		    y = []
@@ -58,7 +58,7 @@ class Intrinsics_Test < Base_Test
 		    y
 		ORE
 		assert_equal [2, 4, 6], out.values
-		
+
 		out = Ore.interp("arr = [1, 2]; arr.push(3); arr")
 		assert_equal [1, 2, 3], out.values
 
@@ -83,7 +83,7 @@ class Intrinsics_Test < Base_Test
 
 		assert_equal "1,2,3", Ore.interp("[1, 2, 3].join(',')")
 
-		assert_equal [2, 4, 6], Ore.interp("[1, 2, 3].map({ x; x * 2 })").values
+		assert_equal [2, 4, 6], Ore.interp("[1, 2, 3].map({ x, i; x * 2 })").values
 		assert_equal [2, 4], Ore.interp("[1, 2, 3, 4].filter({ x; x % 2 == 0 })").values
 		assert_equal 10, Ore.interp("[1, 2, 3, 4].reduce(0, { acc, x; acc + x })")
 
@@ -108,7 +108,7 @@ class Intrinsics_Test < Base_Test
 		refute Ore.interp("[1, 2, 3].all?({ x; x > 2 })")
 	end
 
-	def test_dictionary_intrinsics
+	def test_dictionary_proxies
 		assert Ore.interp("{}.empty?()")
 		refute Ore.interp("{x: 1}.empty?()")
 
@@ -134,7 +134,7 @@ class Intrinsics_Test < Base_Test
 		assert_equal({ x: 1, y: 2, z: 3 }, out)
 	end
 
-	def test_number_intrinsics
+	def test_number_proxies
 		assert Ore.interp("4.even?()")
 		refute Ore.interp("5.even?()")
 

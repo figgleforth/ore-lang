@@ -1,9 +1,9 @@
 `Builtin types I'm experimenting with, very much incomplete. Each of these should have an equivalent Ore::Type in lib/runtime/scopes.rb
 
-#load 'ore/number.ore'
-#load 'ore/array.ore'
-#load 'ore/dictionary.ore'
-#load 'ore/string.ore'
+#use 'ore/number.ore'
+#use 'ore/array.ore'
+#use 'ore/dictionary.ore'
+#use 'ore/string.ore'
 
 Iterable { `todo: This is unused, but here to remind me to think about how to make composing with Iterable behave like Protocols in Swift.
 	next {;}
@@ -18,9 +18,9 @@ Tuple {
 }
 
 Bool {
-	new { value = true;
-		/truthiness = value != false
-	}
-
 	truthiness;
+
+	new { value = true;
+		./truthiness = value != false
+	}
 }

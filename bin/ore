@@ -4,11 +4,15 @@ require_relative '../lib/ore'
 
 INSTRUCTIONS = <<~INST
     Usage:
-        bundle exec bin/ore <file.ore>          - Run once
-        bundle exec bin/ore dev <file.ore>      - Run with hot reload
-        bundle exec bin/ore lex "<code>"        - Produce Lexer output for given code
-        bundle exec bin/ore parse "<code>"      - Produce Parser output for given code
-        bundle exec bin/ore interp "<code>"     - Produce Interpreter output for given code
+        bundle exec bin/ore <file.ore>              - Run once
+        bundle exec bin/ore dev <file.ore>          - Run with hot reload
+        bundle exec bin/ore lex "<code>"            - Produce Lexer output for given code
+        bundle exec bin/ore parse "<code>"          - Produce Parser output for given code
+        bundle exec bin/ore interp "<code>"         - Produce Interpreter output for given code
+
+		bundle exec bin/ore lexf "<file.ore>"       - Produce Lexer output for given file
+        bundle exec bin/ore parsef "<file.ore>"     - Produce Parser output for given file
+        bundle exec bin/ore interpf "<file.ore>"    - Produce Interpreter output for given file
 INST
 
 if ARGV.empty?
@@ -31,6 +35,12 @@ begin
 		pp Ore.parse ARGV[1]
 	when 'interp'
 		pp Ore.interp ARGV[1]
+	when 'lexf'
+		pp Ore.lex_file ARGV[1]
+	when 'parsef'
+		pp Ore.parse_file ARGV[1]
+	when 'interpf'
+		pp Ore.interp_file ARGV[1]
 	else
 		if ARGV[0]
 			puts Ore.interp_file ARGV[0]

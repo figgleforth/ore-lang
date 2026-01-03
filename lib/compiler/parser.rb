@@ -281,15 +281,17 @@ module Ore
 			end
 
 			eat '{'
+			reduce_newlines
 
-			until curr? '}'
+			until curr?(:delimiter) && curr?('}') # note: Added explicit check for delimiter because there was a bug where a comment whose value is simply "}" was evaluating to true in this condition, leaving the parser with an unhandled } todo: Maybe #curr? should always return false if it detects a comment?
 				it.expressions << parse_expression
 				reduce_newlines
 			end
 
 			it.expressions = it.expressions.compact
 
-			eat '}'
+			eat '}' and assert !curr?('}')
+
 			it
 			copy_location it, start
 		end
@@ -559,8 +561,8 @@ module Ore
 		def complete_expression expr, precedence = STARTING_PRECEDENCE
 			return expr unless expr && lexemes?
 
-			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'intrinsic'
-				# note: I'm intentionally skipping `intrinsic` here because a Directive_Expr assumes an expression will follow it. But in the case of #intrinsic, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
+			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'super'
+				# note: I'm intentionally skipping `super` here because a Directive_Expr assumes an expression will follow it. But in the case of #super, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
 				directive            = Ore::Directive_Expr.new
 				directive.name       = expr
 				directive.expression = parse_expression

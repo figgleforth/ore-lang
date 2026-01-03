@@ -2,6 +2,7 @@ module Ore
 	STANDARD_LIBRARY_PATH      = './ore/preload.ore'
 	UNPACK_PREFIX              = '@'
 	DIRECTIVE_PREFIX           = '#'
+	IMPORT_FILE_DIRECTIVE      = 'use'
 	HTML_ATTRS                 = %w(id class href)
 	HTTP_VERBS                 = %w(get put patch post delete head options connect trace)
 	VOID_HTML_TAGS             = %w(area base br col command embed hr img input keygen link meta param source track wbr)

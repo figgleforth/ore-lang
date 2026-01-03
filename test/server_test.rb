@@ -18,7 +18,7 @@ class Server_Test < Base_Test
 		ORE
 
 		result = Ore.interp code
-		assert_instance_of Ore::Instance, result
+		assert_instance_of Ore::Server, result
 		assert_equal 3000, result[:port]
 	end
 
@@ -41,7 +41,7 @@ class Server_Test < Base_Test
 		ORE
 
 		result = Ore.interp code
-		assert_instance_of Ore::Instance, result
+		assert_instance_of Ore::Server, result
 		assert_equal 3001, result[:port]
 	end
 
@@ -70,7 +70,7 @@ class Server_Test < Base_Test
 		interpreter = Ore::Interpreter.new Ore.parse(code)
 		result      = interpreter.output
 
-		assert_instance_of Ore::Instance, result
+		assert_instance_of Ore::Server, result
 
 		# Check that routes were registered
 		assert_equal 2, interpreter.runtime.routes.count

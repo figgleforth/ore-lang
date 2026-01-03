@@ -10,7 +10,7 @@ module Ore
 		UNDERLINE = "\e[4m"
 		ITALIC    = "\e[3m"
 
-		def self.make str, foreground = "30", background = "41"
+		def self.make str, foreground = "31", background = "31"
 			enabled? ? "\x1b[#{foreground};#{background}m#{str}#{RESET}" : str
 		end
 
@@ -110,7 +110,7 @@ module Ore
 
 				# Expand tabs once per line for consistent display
 				visual_content = line_content.gsub("\t", "    ")
-				prefix         = Colors.cyan("#{line_num.to_s.rjust(5)} | ")
+				prefix         = Colors.cyan("#{line_num.to_s.rjust(5)} │ ")
 
 				is_error_line = (line_num >= l0 && line_num <= l1)
 
@@ -120,12 +120,14 @@ module Ore
 					end_char   = (line_num == l1) ? c1 : visual_content.length
 
 					# Convert character indices to visual (space-expanded) indices
-					visual_start_char = line_content[0...start_char].gsub("\t", "    ").length
-					visual_end_char   = line_content[0...end_char].gsub("\t", "    ").length
+					visual_start            = line_content[0...start_char].gsub("\t", "    ")
+					visual_end              = line_content[0...end_char].gsub("\t", "    ")
+					visual_start_char_count = visual_start.length
+					visual_end_char_count   = visual_end.length
 
-					before     = visual_content[0...visual_start_char]
-					error_span = visual_content[visual_start_char...visual_end_char]
-					after      = visual_content[visual_end_char..-1] || ""
+					before     = visual_content[0...visual_start_char_count]
+					error_span = visual_content[visual_start_char_count...visual_end_char_count]
+					after      = visual_content[visual_end_char_count..-1] || ""
 
 					# Apply color/style to the error span
 					styled_span = Colors.bold(Colors.red(error_span))
@@ -136,6 +138,12 @@ module Ore
 					end
 
 					snippet_lines << prefix + before + styled_span + after
+					spaces      = " " * visual_start_char_count
+					error_label = error_name.gsub '_', ' '
+
+					prefix     = Colors.cyan("#{' '.rjust(5)} │ ")
+					error_line = spaces + Colors.bold(Colors.red("╰── " + error_label))
+					snippet_lines << prefix + error_line
 				else
 					# Regular surrounding line
 					snippet_lines << prefix + visual_content

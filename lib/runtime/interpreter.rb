@@ -41,7 +41,7 @@ module Ore
 				# If no scope operator, search through all scopes to find the identifier
 				found_scope = nil
 				runtime.stack.reverse_each do |scope|
-					if scope.has?(expr.value) || scope.respond_to?("intrinsic_#{expr.value}")
+					if scope.has?(expr.value) || scope.respond_to?("proxy_#{expr.value}")
 						found_scope = scope
 						break
 					elsif scope.is_a?(Ore::Instance) && scope.enclosing_scope&.has?(expr.value)
@@ -69,10 +69,13 @@ module Ore
 				link_instance_to_type string, 'String'
 				string
 			when ::Array
-				array        = Ore::Array.new
-				array.values = expr
+				array = Ore::Array.new expr
 				link_instance_to_type array, 'Array'
 				array
+			when ::Hash
+				dict = Ore::Dictionary.new expr
+				link_instance_to_type dict, 'Dictionary'
+				dict
 			when nil
 				Ore::Nil.shared
 			when true
@@ -191,14 +194,21 @@ module Ore
 					raise Ore::Undeclared_Identifier.new(expr, runtime)
 				end
 			elsif scope
-				# note: Delegate intrinsic calls automatically
-				intrinsic_method = "intrinsic_#{expr.value}"
-				if scope.has?(expr.value) && !scope.respond_to?(intrinsic_method)
-					scope.get expr.value
-				elsif scope.respond_to? intrinsic_method
+				# note: Delegate ruby calls automatically
+				proxy_method = "proxy_#{expr.value}"
+				if scope.has?(expr.value) && !scope.respond_to?(proxy_method)
+					result = scope.get expr.value
+					# If the result is a function, duplicate it and set its enclosing_scope to the current scope. This ensures composed types (like `Thing | Record`) have functions that reference the correct type
+					if result.is_a? Ore::Func
+						func                 = result.dup
+						func.enclosing_scope = scope
+						return func
+					end
+					result
+				elsif scope.respond_to? proxy_method
 					type_name      = scope.class.name.split('::').last
 					type_scope     = runtime.stack.reverse_each.find { |s| s.has?(type_name) }
-					type_def       = type_scope[type_name]
+					type_def       = type_scope[type_name] if type_scope
 					declared_value = type_def[expr.value] if type_def
 
 					if declared_value.is_a? Ore::Func
@@ -208,7 +218,7 @@ module Ore
 						return func
 					else
 						# It's a variable/property
-						return scope.send(intrinsic_method)
+						return scope.send(proxy_method)
 					end
 				elsif scope.is_a?(Ore::Instance) && scope.enclosing_scope&.is_a?(Ore::Type) && scope.enclosing_scope&.has?(expr.value)
 					# todo: This seems like a hack. This currently prevents instances from shadowing it's type's declarations.
@@ -352,7 +362,7 @@ module Ore
 				return right_value
 			end
 
-			if expr.right.is_a?(Ore::Directive_Expr) && expr.right.name.value == 'load'
+			if expr.right.is_a?(Ore::Directive_Expr) && expr.right.name.value == Ore::IMPORT_FILE_DIRECTIVE
 				filepath  = interpret expr.right.expression
 				new_scope = Ore::Scope.new expr.left.value
 				runtime.load_file filepath, new_scope
@@ -466,7 +476,7 @@ module Ore
 		end
 
 		def interp_dot_dictionary expr
-			dict = interpret expr.left
+			dict = maybe_instance interpret expr.left
 
 			runtime.push_scope dict
 			result = interpret expr.right
@@ -668,6 +678,33 @@ module Ore
 			end
 		end
 
+		def interp_type expr
+			type             = Ore::Type.new expr.name.value
+			type.expressions = expr.expressions
+
+			ore_name = "Ore::#{expr.name.value}"
+			defined  = Object.const_defined? ore_name
+			link_instance_to_type type, expr.name.value if defined
+
+			if type.types
+				type.types << type.name
+			else
+				type.types = [type.name]
+			end
+
+			# todo: Make @types a set
+			type.types = type.types.uniq
+
+			runtime.push_then_pop type do |scope|
+				expr.expressions.each do |expr|
+					interpret expr
+				end
+			end
+
+			runtime.stack.last.declare type.name, type
+			type
+		end
+
 		def interp_type_call type, expr
 			#
 			# Ore::Type_Expr is converted to Ore::Type in #interp_type.
@@ -684,16 +721,37 @@ module Ore
 			# - Delete :new from instance, no longer needed
 			#
 
-			# :generalize_me
-
-			instance                 = nil
-			case type.name
-				# todo: This case statement should handle all types that have intrinsics
-			when 'String'
-				instance = Ore::String.new
+			# todo: Clean this up
+			ore_name = "Ore::#{type.name}"
+			instance = if Object.const_defined?(ore_name)
+				konstant = Object.const_get(ore_name)
+				# note: Only instantiate if it's a subclass of Instance (but not Instance itself) to exclude core runtime types like Type, Scope, Func, etc.
+				if konstant.is_a?(Class) && konstant < Ore::Instance && konstant != Ore::Instance
+					if konstant.respond_to?(:new)
+						konstant.new
+					else
+						konstant
+					end
+				else
+					Ore::Instance.new type.name
+				end
 			else
-				instance = Ore::Instance.new type.name
+				types               = type.types.to_a # note: Types is a set, so the #to_a lets me iterate below
+				first_composed_with = "Ore::#{types[1] || types[0]}" # note: types[0] is this type's name, fallback to itself
+
+				first_composition = if Object.const_defined? first_composed_with
+					Object.const_get first_composed_with
+				else
+					Ore::Instance
+				end
+
+				if first_composition < Ore::Instance && first_composition != Ore::Instance
+					first_composition.new
+				else
+					Ore::Instance.new type.name
+				end
 			end
+
 			instance.types           = type.types
 			instance.enclosing_scope = type
 
@@ -737,6 +795,25 @@ module Ore
 
 			instance.delete :new
 			instance
+		end
+
+		def interp_func expr
+			func                 = Ore::Func.new expr.name&.value
+			func.enclosing_scope = runtime.stack.last
+			func.expressions     = expr.expressions
+
+			if func.name
+				runtime.stack.last.declare func.name, func
+
+				# Track static functions (functions defined with ../)
+				# Get the original name expression to check for scope operator
+				if expr.name.is_a?(Ore::Identifier_Expr) && expr.name.scope_operator == '../'
+					runtime.stack.last.static_declarations ||= Set.new
+					runtime.stack.last.static_declarations.add func.name.to_s
+				end
+			end
+
+			func
 		end
 
 		def interp_func_call func, expr
@@ -803,13 +880,15 @@ module Ore
 		# @param req [Ore::Request] Request object to inject
 		# @param res [Ore::Response] Response object to inject
 		# @param url_params [Hash] Extracted URL parameters (e.g., {"id" => "123"})
+		# @param server_instance [Ore::Instance] The server instance (for accessing instance variables)
 		# @return The result of handler execution
-		def interp_route_handler route, req, res, url_params = {}
+		def interp_route_handler route, req, res, url_params = {}, server_instance: nil
 			handler = route.handler
 			params  = handler.expressions.select { |e| e.is_a? Ore::Param_Expr }
 
 			call_scope = Ore::Scope.new "#{handler.name || 'anonymous'}_route"
 			runtime.push_scope handler.enclosing_scope
+			runtime.push_scope server_instance if server_instance
 			runtime.push_scope call_scope
 
 			# Make request and response available without explicit declaration
@@ -842,7 +921,8 @@ module Ore
 			body   = handler.expressions - params
 			result = nil
 
-			body.each do |expr|
+			body.compact.each do |expr|
+				# bug todo: Sometimes body contains `nil` when that should never be the case
 				next if expr.is_a? Ore::Param_Expr # Reminder, param expressions are part of the function body by design. This is redundant because I'm subtracting the params from the handler expressions a few lines above, but just in case!
 
 				result = interpret expr
@@ -875,38 +955,19 @@ module Ore
 				end
 			end
 
-			# Clean up scopes
-			popped_call      = runtime.pop_scope
-			popped_enclosing = runtime.pop_scope
-
+			# Clean up scopes in reverse order
+			popped_call = runtime.pop_scope
 			Ore.assert popped_call == call_scope
+
+			if server_instance
+				popped_instance = runtime.pop_scope
+				Ore.assert popped_instance == server_instance
+			end
+
+			popped_enclosing = runtime.pop_scope
 			Ore.assert popped_enclosing == handler.enclosing_scope
 
 			result
-		end
-
-		def interp_type expr
-			type = Ore::Type.new expr.name.value
-
-			type.expressions = expr.expressions
-
-			if type.types
-				type.types << type.name
-			else
-				type.types = [type.name]
-			end
-
-			# todo: Make @types a set
-			type.types = type.types.uniq
-
-			runtime.push_then_pop type do |scope|
-				expr.expressions.each do |expr|
-					interpret expr
-				end
-			end
-
-			runtime.stack.last.declare type.name, type
-			type
 		end
 
 		def interp_element expr
@@ -967,25 +1028,6 @@ module Ore
 			runtime.stack.last.declare route_key, route if expression.name && expression.name != 'Ore::Func'
 
 			route
-		end
-
-		def interp_func expr
-			func                 = Ore::Func.new expr.name&.value
-			func.enclosing_scope = runtime.stack.last
-			func.expressions     = expr.expressions
-
-			if func.name
-				runtime.stack.last.declare func.name, func
-
-				# Track static functions (functions defined with ../)
-				# Get the original name expression to check for scope operator
-				if expr.name.is_a?(Ore::Identifier_Expr) && expr.name.scope_operator == '../'
-					runtime.stack.last.static_declarations ||= Set.new
-					runtime.stack.last.static_declarations.add func.name.to_s
-				end
-			end
-
-			func
 		end
 
 		def interp_composition expr
@@ -1198,22 +1240,59 @@ module Ore
 			case expr.name.value
 			when 'echo'
 				value = interpret expr.expression
-				puts value
+				puts value # note: Don't remove this like I did, it is supposed to print out. todo: Be able to set your own output stream
 				value
-			when 'intrinsic'
-				# The #intrinsic directive evaluates to the result of calling the intrinsic Ruby method
+			when 'super'
+				# The #super directive evaluates to the result of calling the ruby Ruby method
 				func_scope = runtime.stack.last
-				raise Ore::Invalid_Intrinsic_Directive_Usage.new(func_scope, runtime) unless func_scope.is_a? Ore::Func
-
-				func_name        = func_scope.name
-				instance_or_type = runtime.stack[-2] # This is instance/type that has the intrinsic method is one level down the stack
-				intrinsic_method = "intrinsic_#{func_name}"
-
-				unless instance_or_type.respond_to? intrinsic_method
-					raise Ore::Invalid_Directive_Usage.new expr, runtime
+				unless func_scope.is_a? Ore::Func
+					raise Ore::Invalid_Super_Proxy_Directive_Usage.new func_scope, runtime
 				end
 
-				instance_or_type.send intrinsic_method, *func_scope.arguments
+				func_name        = func_scope.name
+				proxy_method     = "proxy_#{func_name}"
+				instance_or_type = func_scope.enclosing_scope # An instance or type that should have the ruby method declared
+
+				# note: For static proxies on Types (like Record.find), create a temporary instance of the Ruby class. This allows the proxy method to access the Type's declarations.
+				target = if instance_or_type.instance_of?(Ore::Type) && instance_or_type.name
+					# Check all types in the composition to find a matching Ruby class
+					matching_class = nil
+					instance_or_type.types.to_a.reverse.each do |type_name|
+						ore_class_name = "Ore::#{type_name}"
+						if Object.const_defined?(ore_class_name)
+							konstant = Object.const_get ore_class_name
+							if konstant.is_a?(Class) && konstant < Ore::Instance
+								matching_class = konstant
+								break
+							end
+						end
+					end
+
+					if matching_class
+						temp_instance              = matching_class.new instance_or_type.name
+						temp_instance.declarations = instance_or_type.declarations
+						# todo: Do static_declarations need to be copied over?
+						temp_instance
+					else
+						instance_or_type
+					end
+				else
+					instance_or_type
+				end
+
+				unless target.respond_to? proxy_method
+					raise Ore::Missing_Super_Proxy_Declaration.new expr, runtime
+				end
+
+				result = target.send proxy_method, *func_scope.arguments
+
+				# Auto-link instances created by proxy methods to their global types
+				if result.is_a?(Ore::Instance) && result.enclosing_scope.nil?
+					type_name = result.class.name.split('::').last
+					link_instance_to_type result, type_name
+				end
+
+				result
 			when 'start'
 				server_instance = interpret expr.expression
 				unless server_instance.is_a? Ore::Instance
@@ -1227,17 +1306,22 @@ module Ore
 
 				server_runner.start
 				server_runner
-			when 'load'
+			when 'connect'
+				database = interpret expr.expression
+				database.create_connection!
+				database
+
+			when Ore::IMPORT_FILE_DIRECTIVE
 				# Standalone load is interpreted into current scope by passing the scope into runtime#load_file
 				filepath = interpret expr.expression
 				runtime.load_file filepath, runtime.stack.last
-				# note: #load_file returns the output but it's ignored. Assigning the value of a #load directive executres code in #interp_infix_expr
+				# note: #load_file returns the output but it's ignored. Assigning the value of a #use directive executres code in #interp_infix_expr
 			else
-				# todo: Allow intrinsics to be extended by the user. Requirements would be:
+				# todo: Allow builtins to be extended by the user. Requirements would be:
 				#   1) Create type in Ore
 				#   2) Create equivalent type in scopes.rb or similar
-				#   3) Make sure functions which use the #intrinsic expression in its body are named in to match the Ore::Type "intrinsic_#{func_name}"
-				# For example, `String { upcase{; #intrinsic } }` maps to `Ore::String#intrinsic_upcase`
+				#   3) Make sure functions which use the #super expression in its body are named in to match the Ore::Type "proxy_#{func_name}"
+				# For example, `String { upcase{; #super } }` maps to `Ore::String#super_upcase`
 				raise Ore::Invalid_Directive_Usage.new(expr, runtime)
 			end
 		end
@@ -1324,6 +1408,7 @@ module Ore
 				when 'stop'
 					throw :stop
 				end
+			when nil
 			else
 				raise Ore::Interpret_Expr_Not_Implemented.new(expr, runtime)
 			end

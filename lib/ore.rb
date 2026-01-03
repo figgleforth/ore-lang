@@ -1,6 +1,6 @@
 require_relative 'shared/constants'
 require_relative 'shared/helpers'
-require_relative 'shared/intrinsic_methods'
+require_relative 'shared/super_proxies'
 
 # Compile-time (source to AST)
 require_relative 'compiler/lexeme'
@@ -15,6 +15,8 @@ require_relative 'runtime/runtime'
 require_relative 'runtime/server_runner'
 require_relative 'runtime/dom_renderer'
 require_relative 'runtime/interpreter'
+
+def assert(args) = Ore.assert(*args)
 
 module Ore
 	extend Helpers
@@ -48,9 +50,9 @@ module Ore
 				reload = false
 
 				code    = File.read filepath
-				runtime = Ore::Runtime.new
+				global  = Ore::Global.with_standard_library
+				runtime = Ore::Runtime.new global
 				runtime.register_source filepath, code
-				global      = Ore::Global.with_standard_library
 				expressions = Ore.parse(code, filepath: filepath)
 				interpreter = Ore::Interpreter.new expressions, runtime
 				result      = interpreter.output

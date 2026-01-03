@@ -85,7 +85,7 @@ module Ore
 				req.declarations['body']    = req.body
 
 				begin
-					result = interpreter.interp_route_handler target_route, req, res, url_params
+					result = interpreter.interp_route_handler target_route, req, res, url_params, server_instance: @server_instance
 
 					# Apply response object's configuration to WEBrick response
 					response.status = res.status

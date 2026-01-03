@@ -1115,14 +1115,15 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_loading_external_source_files
-		out = Ore.interp "#load 'ore/preload.ore'; (Bool, Bool())"
+		out = Ore.interp "#use 'ore/preload.ore'; (Bool, Bool())"
 
 		assert_instance_of Ore::Type, out.values[0]
-		assert_instance_of Ore::Instance, out.values[1]
+		assert_kind_of Ore::Instance, out.values[1]
+		assert_instance_of Ore::Bool, out.values[1]
 	end
 
 	def test_standalone_load_into_current_scope
-		out = Ore.interp "#load 'test/fixtures/test_module.ore'
+		out = Ore.interp "#use 'test/fixtures/test_module.ore'
 		(MODULE_NAME, MODULE_VALUE, module_func(10))"
 
 		assert_instance_of Ore::Tuple, out
@@ -1132,7 +1133,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_load_assignment_into_variable_identifier
-		out = Ore.interp "mod = #load 'test/fixtures/test_module.ore'
+		out = Ore.interp "mod = #use 'test/fixtures/test_module.ore'
 		(mod, mod.MODULE_NAME, mod.MODULE_VALUE, mod.module_func(10))"
 
 		assert_instance_of Ore::Tuple, out
@@ -1143,13 +1144,13 @@ class Interpreter_Test < Base_Test
 
 		# Verify declarations are NOT in current scope
 		assert_raises Ore::Undeclared_Identifier do
-			Ore.interp "mod = #load 'test/fixtures/test_module.ore'
+			Ore.interp "mod = #use 'test/fixtures/test_module.ore'
 			MODULE_NAME"
 		end
 	end
 
 	def test_load_assignment_into_class_identifier
-		out = Ore.interp "Module = #load 'test/fixtures/test_module.ore'
+		out = Ore.interp "Module = #use 'test/fixtures/test_module.ore'
 		(Module, Module.MODULE_NAME, Module.MODULE_VALUE, Module.module_func(10))"
 
 		assert_instance_of Ore::Tuple, out
@@ -1160,13 +1161,13 @@ class Interpreter_Test < Base_Test
 
 		# Verify declarations are NOT in current scope
 		assert_raises Ore::Undeclared_Identifier do
-			Ore.interp "Module = #load 'test/fixtures/test_module.ore'
+			Ore.interp "Module = #use 'test/fixtures/test_module.ore'
 			MODULE_NAME"
 		end
 	end
 
 	def test_load_assignment_into_constant_identifier
-		out = Ore.interp "MODULE = #load 'test/fixtures/test_module.ore'
+		out = Ore.interp "MODULE = #use 'test/fixtures/test_module.ore'
 		(MODULE, MODULE.MODULE_NAME, MODULE.MODULE_VALUE, MODULE.module_func(10))"
 
 		assert_instance_of Ore::Tuple, out
@@ -1177,15 +1178,15 @@ class Interpreter_Test < Base_Test
 
 		# Verify declarations are NOT in current scope
 		assert_raises Ore::Undeclared_Identifier do
-			Ore.interp "MODULE = #load 'test/fixtures/test_module.ore'
+			Ore.interp "MODULE = #use 'test/fixtures/test_module.ore'
 			MODULE_NAME"
 		end
 	end
 
 	def test_load_same_file_into_multiple_scopes
 		out = Ore.interp "
-		lib1 = #load 'test/fixtures/test_module.ore'
-		lib2 = #load 'test/fixtures/test_module.ore'
+		lib1 = #use 'test/fixtures/test_module.ore'
+		lib2 = #use 'test/fixtures/test_module.ore'
 
 		(lib1, lib2, lib1.MODULE_VALUE, lib2.MODULE_VALUE, lib1 != lib2)"
 
@@ -1203,8 +1204,8 @@ class Interpreter_Test < Base_Test
 	def test_double_loading_file
 		assert_raises Ore::Cannot_Reassign_Constant do
 			out = Ore.interp "
-			#load 'test/fixtures/constants.ore'
-			#load 'test/fixtures/constants.ore'"
+			#use 'test/fixtures/constants.ore'
+			#use 'test/fixtures/constants.ore'"
 		end
 	end
 
@@ -1221,6 +1222,29 @@ class Interpreter_Test < Base_Test
 		assert out.values[0]
 	end
 
+	def test_for_loop_with_scopes
+		out = Ore.interp <<~ORE
+		    Numbers {
+		    	numbers = []
+
+				new { numbers;
+					./numbers = numbers
+				}
+
+		    	multiply { by;
+					result = []
+		    		for ./numbers
+		    			result.push(it * by)
+		    		end
+		    		result
+		    	}
+		    }
+
+		    Numbers([1, 2, 3]).multiply(2)
+		ORE
+		assert_equal [2, 4, 6], out.values
+	end
+
 	def test_for_loop_by_strides
 		out = Ore.interp "
 		NUMBERS = [4, 8, 15, 16, 23, 42]
@@ -1234,7 +1258,7 @@ class Interpreter_Test < Base_Test
 		assert_equal [[4, 8], [15, 16], [23, 42]], out.values
 	end
 
-	def test_for_loop_at_and_it_intrinsics
+	def test_for_loop_at_and_it_builtins
 		out = Ore.interp "
 		indices = []
 
@@ -1638,7 +1662,7 @@ class Interpreter_Test < Base_Test
 		end
 	end
 
-	def test_intrinsic_string_members
+	def test_proxy_string_members
 		out = Ore.interp "String().length"
 		assert_equal 0, out
 
@@ -1657,16 +1681,16 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp "'WALT!'.downcase()"
 		assert_equal "walt!", out
 
-		assert_raises Ore::Invalid_Intrinsic_Directive_Usage do
-			Ore.interp "#intrinsic whatever"
+		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
+			Ore.interp "#super whatever"
 		end
 
-		assert_raises Ore::Invalid_Intrinsic_Directive_Usage do
-			Ore.interp "#intrinsic 123"
+		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
+			Ore.interp "#super 123"
 		end
 
-		assert_raises Ore::Invalid_Intrinsic_Directive_Usage do
-			Ore.interp "Type { #intrinsic 123; }"
+		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
+			Ore.interp "Type { #super 123; }"
 		end
 	end
 
@@ -1960,11 +1984,11 @@ class Interpreter_Test < Base_Test
 		assert_equal [4, 8], out.values
 	end
 
-	def test_using_pound_intrinsic_as_expression
+	def test_using_pound_proxy_as_expression
 		code = <<~CODE
 		    String | String {
 		        upcase {;
-		        	#intrinsic + " (SWIZZLED)"
+		        	#super + " (SWIZZLED)"
 		        }
 		    }
 			"test".upcase()

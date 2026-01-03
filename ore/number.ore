@@ -8,15 +8,15 @@ Number {
 		./denominator = 1
 	}
 
-	to_s {; #intrinsic }
-	abs {; #intrinsic }
-	floor {; #intrinsic }
-	ceil {; #intrinsic }
-	round {; #intrinsic }
-	sqrt {; #intrinsic }
-	even? {; #intrinsic }
-	odd? {; #intrinsic }
-	to_i {; #intrinsic }
-	to_f {; #intrinsic }
-	clamp { min, max; #intrinsic }
+	to_s {; #super }
+	abs {; #super }
+	floor {; #super }
+	ceil {; #super }
+	round {; #super }
+	sqrt {; #super }
+	even? {; #super }
+	odd? {; #super }
+	to_i {; #super }
+	to_f {; #super }
+	clamp { min, max; #super }
 }
