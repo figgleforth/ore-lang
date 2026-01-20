@@ -1093,7 +1093,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_html_element
-		out = Ore.interp "<My_Div> {
+		out = Ore.interp "My_Div {
 			element = 'div'
 
 			id = 'my_div'
@@ -1107,7 +1107,7 @@ class Interpreter_Test < Base_Test
 
 		it = My_Div()
 		(My_Div, it, it.render())"
-		assert_instance_of Ore::Html_Element, out.values[0]
+		assert_instance_of Ore::Type, out.values[0]
 		assert_instance_of Ore::Instance, out.values[1]
 		assert_instance_of String, out.values[2]
 		assert_equal 'Text content of this div', out.values[2]
@@ -2128,5 +2128,72 @@ class Interpreter_Test < Base_Test
 		Ore.interp "Inout.write_string_to_file('test/fixtures/hello_write.txt', 'Hello, Write!')"
 		out = Ore.interp "Inout.read_file_to_string('test/fixtures/hello_write.txt')"
 		assert_equal "Hello, Write!", out.value
+	end
+
+	def test_fence_expr_returns_string_expr
+		out = Ore.interp '```
+		some content
+		```'
+		assert_instance_of Ore::Fence, out
+		assert out.value.value.include?('some content')
+	end
+
+	def test_html_fence_with_interpolation
+		out = Ore.interp "
+		name = 'Cooper'
+		```html
+		<h1>Welcome |name|</h1>
+		```"
+		assert_equal '<h1>Welcome Cooper</h1>', out.strip
+	end
+
+	def test_html_fence_without_interpolation
+		out = Ore.interp '```html
+		<p>Plain text</p>
+		```'
+		assert out.include?('<p>Plain text</p>')
+	end
+
+	def test_html_fence_in_route_handler
+		out = Ore.interp "
+		@use 'ore/server.ore'
+
+		App | Server {
+			get:// home {->
+				title = 'My Page'
+				```html
+				<h1>|title|</h1>
+				```
+			}
+		}
+
+		app = App()
+		app.home()"
+		assert out.include?('<h1>My Page</h1>')
+	end
+
+	def test_html_fence_multiline_with_interpolation
+		out = Ore.interp "
+		name = 'Alice'
+		count = 42
+		```html
+		<div>
+			<h1>Hello |name|</h1>
+			<p>You have |count| messages</p>
+		</div>
+		```"
+		assert out.include?('Hello Alice')
+		assert out.include?('You have 42 messages')
+	end
+
+	def test_fence_expr_preserves_content
+		out = Ore.interp '```
+		line 1
+		line 2
+		```'
+
+		assert_instance_of Ore::Fence, out
+		assert out.value.value.include?('line 1')
+		assert out.value.value.include?('line 2')
 	end
 end

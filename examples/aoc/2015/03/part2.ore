@@ -24,7 +24,7 @@ Vec2 {
 	}
 }
 
-input = Inout.read('ore/examples/aoc/2015/03/input.txt')
+input = Inout.read('examples/aoc/2015/03/input.txt')
 
 # "x.y": num_presents
 visited = {}

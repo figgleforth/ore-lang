@@ -47,7 +47,7 @@ nice? { input ->
 	two_pairs?(input) and repeat_with_gap?(input)
 }
 
-input = Inout.read('ore/examples/aoc/2015/05/input.txt').split('\n')
+input = Inout.read('examples/aoc/2015/05/input.txt').split('\n')
 total = 0
 
 for input

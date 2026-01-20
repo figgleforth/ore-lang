@@ -1,0 +1,13 @@
+# This app demonstrates using html fences (```html\n...```) to render html as opposed to Dom compositions. (see examples/todo_app.ore)
+@use 'ore/server.ore'
+
+App | Server {
+	get:// home {->
+		name = 'Cooper'
+		```html
+		<h1>Welcome to |name|'s webpage</h1>
+		```
+	}
+}
+
+@start App()

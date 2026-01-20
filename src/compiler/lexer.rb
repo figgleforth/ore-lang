@@ -142,7 +142,7 @@ module Ore
 		end
 
 		def lex_fence_block
-			marker = lex_many Ore::COMMENT_MULTILINE_CHAR.length, Ore::COMMENT_MULTILINE_CHAR
+			marker = lex_many Ore::FENCE_CHARS.length, Ore::FENCE_CHARS
 			it     = ::String.new
 
 			eat while whitespace? || newline?
@@ -155,7 +155,7 @@ module Ore
 				end
 			end
 
-			lex_many Ore::COMMENT_MULTILINE_CHAR.length, Ore::COMMENT_MULTILINE_CHAR
+			lex_many Ore::FENCE_CHARS.length, Ore::FENCE_CHARS
 			it
 		end
 
@@ -163,7 +163,7 @@ module Ore
 			it    = ::String.new
 			quote = eat
 
-			# todo: Refactor this, maybe? I was trying to use interpolation pipes in multiline text (see ./ore/examples/basic_page.ore) and realized that I wasn't escaping those, which led to the interpreter trying to actually interpolate the string.
+			# todo: Refactor this, maybe? I was trying to use interpolation pipes in multiline text (see ./examples/basic_page.ore) and realized that I wasn't escaping those, which led to the interpreter trying to actually interpolate the string.
 			while chars? && curr != quote
 				if curr == '\\'
 					eat
@@ -248,17 +248,22 @@ module Ore
 			tokens = []
 
 			while chars?
-				single    = curr == Ore::COMMENT_CHAR
-				multiline = peek(0, Ore::COMMENT_MULTILINE_CHAR.length) == Ore::COMMENT_MULTILINE_CHAR
+				single = curr == Ore::COMMENT_CHAR
+				fenced = peek(0, Ore::FENCE_CHARS.length) == Ore::FENCE_CHARS
 
 				token = Ore::Lexeme.new.tap do
 					it.l0 = line
 					it.c0 = col
 
-					if single || multiline
-						if multiline
-							it.type  = :fence
+					if single || fenced
+						if fenced
 							it.value = lex_fence_block
+							it.type  = if it.value.downcase.start_with? "html\n"
+								it.value = it.value[5..] # strips html and the newline
+								:html
+							else
+								:fence
+							end
 						else
 							it.type  = :comment
 							it.value = lex_oneline_comment

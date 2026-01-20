@@ -10,7 +10,7 @@ Page_Layout | Html {
 	css_font_family = 'monospace'
 	css_padding = '3.2em'
 
-	render { ->
+	render {->
 		[Head(Title("Tasks")), Body(children)]
 	}
 }
@@ -22,7 +22,7 @@ Single_Task | Div {
 		.task = task
 	}
 
-	render { ->
+	render {->
 		[A('/', 'Back to all'), P("|id|: |task[:text]|")]
 	}
 }
@@ -36,7 +36,7 @@ Task_Item | Li {
 		.id   = task[:id]
 	}
 
-	render { ->
+	render {->
 		A("/|id|", "|id|: |text|")
 	}
 }
@@ -48,7 +48,7 @@ List_Of_Tasks | Ul {
 		.tasks = tasks
 	}
 
-	render { ->
+	render {->
 		tasks.map({ it, at ->
 			Task_Item(it)
 		})
@@ -59,7 +59,7 @@ New_Task_Form | Form {
 	html_action = '/new'
 	html_method = 'POST'
 
-	render { ->
+	render {->
 		[
 			Label('Add a new task:'),
 			Br(),
@@ -79,7 +79,7 @@ Input_Field | Textarea {
 Submit_Button | Button {
 	html_type = 'submit'
 
-	render { -> 'Add Task' }
+	render {-> 'Add Task' }
 }
 
 ```Database```
@@ -115,7 +115,7 @@ Task.create({text: "Build admin dashboard"})
 App | Server {
 	port = 80
 
-	get:// home { ->
+	get:// home {->
 		tasks = Task.all()
 		Page_Layout([
 			H2('My Tasks'),
@@ -130,7 +130,7 @@ App | Server {
 		Page_Layout(Single_Task(task))
 	}
 
-	post://new { ->
+	post://new {->
 		id = Task.create({text: request.body.task })
 		# You can call response.redirect("/") to manually set the destination, or call the named route functions:
 		# home()
@@ -138,12 +138,12 @@ App | Server {
 	}
 
 	# note: The following routes prevent 500 errors since we're handling all routes here, nothing is filtered.
-	get://favicon.ico { ->
+	get://favicon.ico {->
 		response.status = 404
 		''
 	}
 
-	get://apple-touch-icon-precomposed.png { ->
+	get://apple-touch-icon-precomposed.png {->
 		response.status = 404
 		''
 	}

@@ -312,28 +312,30 @@ module Ore
 			copy_location it, start
 		end
 
-		def parse_html_expr
-			# TODO: Should attributes and data attributes be filtered out of @expressions and into their own attr like :attributes, :data_attributes, etc?
-			# TODO: :html_vs_type_expr
-
-			start = curr_lexeme
-			eat '<'
-			it         = Ore::Html_Element_Expr.new eat
-			it.element = it.lexeme
-			eat '>'
-
-			eat '{'
-			it.expressions = []
-			until curr? '}'
-				it.expressions << parse_expression
-				reduce_newlines
-			end
-
-			it.expressions.compact!
-			# TODO: Print a warning if a `render` function isn't declared?
-
-			eat '}'
+		def parse_comment
+			lexeme   = eat
+			it       = Ore::Comment_Expr.new lexeme.value
+			it.value = Ore::String_Expr.new lexeme.value
+			it.body  = Ore::String_Expr.new lexeme
+			it.type  = lexeme.type
 			it
+		end
+
+		def parse_fence_expr
+			lexeme   = eat
+			it       = Ore::Fence_Expr.new lexeme.value
+			it.value = Ore::String_Expr.new lexeme.value
+			it.type  = lexeme.type # :fence by default
+			it
+		end
+
+		def parse_html_expr
+			# TODO: :html_vs_type_expr
+			start      = curr_lexeme
+			it         = Ore::Html_Fence_Expr.new eat
+			it.body    = Ore::String_Expr.new start
+			it.value   = it.body
+			it.element = it.lexeme
 			copy_location it, start
 		end
 
@@ -517,9 +519,6 @@ module Ore
 			elsif curr?(:identifier, ':', :Identifier) || curr?(ANY_IDENTIFIER) || curr?(Ore::RUNTIME_SCOPE_OPERATOR, :identifier) || curr?(SCOPE_OPERATORS, ANY_IDENTIFIER) || curr?(RUNTIME_SCOPE_OPERATOR, :identifier)
 				parse_identifier_expr
 
-			elsif curr?('<', ANY_IDENTIFIER, '>')
-				parse_html_expr
-
 			elsif curr?(%w( [ \( { |)) && curr?(:delimiter)
 				# :absolute_value_circumfix
 				parse_circumfix_expr opening: curr_lexeme.value
@@ -548,17 +547,14 @@ module Ore
 			elsif curr? :delimiter
 				reduce_newlines and nil
 
+			elsif curr? :html # This is a subtype of Ore::Fence_Expr
+				parse_html_expr
+
 			elsif curr? :fence
-				lexeme       = eat
-				comment      = Ore::Fence_Expr.new lexeme.value
-				comment.type = lexeme.type
-				comment
+				parse_fence_expr
 
 			elsif curr? :comment
-				lexeme       = eat
-				comment      = Ore::Comment_Expr.new lexeme.value
-				comment.type = lexeme.type
-				comment
+				parse_comment
 
 			else
 				raise "Unhandled lexeme: #{curr_lexeme.inspect}"

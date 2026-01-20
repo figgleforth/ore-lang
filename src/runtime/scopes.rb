@@ -110,10 +110,6 @@ module Ore
 		attr_accessor :expressions, :static, :arguments
 	end
 
-	class Html_Element < Instance
-		attr_accessor :expressions, :attributes
-	end
-
 	class Route < Func
 		attr_accessor :http_method, :path, :handler, :parts, :param_names
 	end
@@ -172,11 +168,9 @@ module Ore
 		def * other
 			value * other
 		end
+	end
 
-		# note: I use pp (pretty_print) in lots of places, which uses #inspect, which happens to output strings with odd formatting in Ore.
-		def inspect
-			value.inspect
-		end
+	class Fence < String
 	end
 
 	# note: Be sure to prefix with Ore:: whenever referencing this Array type to prevent ambiguity with Ruby's ::Array!

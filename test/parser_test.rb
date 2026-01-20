@@ -766,33 +766,13 @@ class Parser_Test < Base_Test
 	end
 
 	def test_empty_html_element_expression
-		out = Ore.parse '<element> {}'
+		out = Ore.parse '```html
+		```'
 		assert_equal 1, out.count
 
-		assert_instance_of Ore::Html_Element_Expr, out.first
-		assert_equal 'element', out.first.element.value
-		assert_empty out.first.expressions
+		assert_instance_of Ore::Html_Fence_Expr, out.first
 	end
-
-	def test_simple_html_element_expression
-		out = Ore.parse "<My_Div> {
-			element = 'div'
-
-			id = 'my_div'
-			class = 'my_class'
-			data_something = 'some data attribute'
-
-			render { ->
-				'Text content of this div'
-			}
-		}"
-		assert_equal 1, out.count
-		assert_instance_of Ore::Html_Element_Expr, out.first
-		assert_equal 'My_Div', out.first.element.value
-
-		assert_equal 5, out.first.expressions.count
-	end
-
+	
 	def test_skip_and_stop_are_operators
 		out = Ore.parse 'skip'
 		assert_instance_of Ore::Operator_Expr, out.first
@@ -821,5 +801,77 @@ class Parser_Test < Base_Test
 		assert_instance_of Ore::Fence_Expr, out.first
 		assert_instance_of Ore::Fence_Expr, out.last
 		assert out.first == out.last
+	end
+
+	def test_fence_expr_attributes
+		out = Ore.parse '```
+		some content here
+		```'
+		fence = out.first
+
+		assert_instance_of Ore::Fence_Expr, fence
+		assert_equal :fence, fence.type
+		assert_instance_of Ore::String_Expr, fence.value
+		assert fence.value.value.include?('some content here')
+	end
+
+	def test_fence_expr_multiline_content
+		out = Ore.parse '```
+		line one
+		line two
+		line three
+		```'
+		fence = out.first
+
+		assert_instance_of Ore::Fence_Expr, fence
+		assert_equal :fence, fence.type
+		assert fence.value.value.include?('line one')
+		assert fence.value.value.include?('line two')
+		assert fence.value.value.include?('line three')
+	end
+
+	def test_html_fence_expr_attributes
+		out = Ore.parse '```html
+		<div>Hello</div>
+		```'
+		html_fence = out.first
+
+		assert_instance_of Ore::Html_Fence_Expr, html_fence
+		assert_instance_of Ore::String_Expr, html_fence.body
+		assert html_fence.body.value.include?('<div>Hello</div>')
+		assert_equal html_fence.value, html_fence.body
+		refute_nil html_fence.element
+	end
+
+	def test_html_fence_expr_with_interpolation
+		out = Ore.parse '```html
+		<h1>Welcome |name|</h1>
+		```'
+		html_fence = out.first
+
+		assert_instance_of Ore::Html_Fence_Expr, html_fence
+		assert html_fence.body.value.include?('<h1>Welcome |name|</h1>')
+		assert html_fence.body.interpolated
+	end
+
+	def test_html_fence_expr_without_interpolation
+		out = Ore.parse '```html
+		<p>Plain text</p>
+		```'
+		html_fence = out.first
+
+		assert_instance_of Ore::Html_Fence_Expr, html_fence
+		refute html_fence.body.interpolated
+	end
+
+	def test_html_fence_strips_html_marker
+		out = Ore.parse '```html
+		<span>Content</span>
+		```'
+		html_fence = out.first
+
+		assert_instance_of Ore::Html_Fence_Expr, html_fence
+		# The 'html' marker should be stripped from body
+		refute html_fence.body.value.start_with?('html')
 	end
 end

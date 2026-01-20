@@ -324,7 +324,7 @@ module Ore
 				end
 			end
 
-			# For plain identifiers (no scope operator) inside an Instance/Type body, new declarations should go to that Instance/Type, not to an enclosing scope that happens to have the same identifier. This fixes a bug that prevented HTML Layout's `title` from capturing Title's `title` declaration in ore/examples/basic_html_page.ore.
+			# For plain identifiers (no scope operator) inside an Instance/Type body, new declarations should go to that Instance/Type, not to an enclosing scope that happens to have the same identifier. This fixes a bug that prevented HTML Layout's `title` from capturing Title's `title` declaration in examples/basic_html_page.ore.
 			if expr.left.is_a?(Ore::Identifier_Expr) && !expr.left.scope_operator
 				current_scope    = runtime.stack.last
 				assignment_scope ||= current_scope
@@ -684,7 +684,7 @@ module Ore
 			when Ore::Func
 				interp_func_call receiver, expr
 
-			when Ore::Instance, Ore::Type, Ore::Html_Element
+			when Ore::Instance, Ore::Type
 				interp_type_call receiver, expr
 
 			else
@@ -984,23 +984,14 @@ module Ore
 			result
 		end
 
-		def interp_element expr
-			element             = Ore::Html_Element.new expr.element.value
-			element.expressions = expr.expressions
+		# @param expr [Ore::Fence_Expr]
+		def interp_fence expr
+			Ore::Fence.new expr.value # note: Ore::Fence extends Ore::String
+		end
 
-			runtime.stack.last.declare element.name, element
-
-			runtime.push_then_pop element do |scope|
-				expr.expressions.each do |expr|
-					# todo: When evaluating render{->}, it should expect one of the following:
-					# - string
-					# - another Html_Element
-					# - array of Html_Elements
-					interpret expr
-				end
-			end
-
-			element
+		# @param expr [Ore::Html_Fence_Expr]
+		def interp_html_fence expr
+			interp_string expr.body
 		end
 
 		def interp_route expr
@@ -1449,9 +1440,6 @@ module Ore
 			when Ore::Type_Expr
 				interp_type expr
 
-			when Ore::Html_Element_Expr
-				interp_element expr
-
 			when Ore::Route_Expr
 				interp_route expr
 
@@ -1491,8 +1479,14 @@ module Ore
 			when Ore::Directive_Expr
 				interp_directive expr
 
-			when Ore::Comment_Expr, Ore::Fence_Expr
-				# No use for comments or fences
+			when Ore::Fence_Expr
+				interp_fence expr
+
+			when Ore::Html_Fence_Expr
+				interp_html_fence expr
+
+			when Ore::Comment_Expr
+				expr.value
 
 			when Ore::Operator_Expr
 				case expr.value

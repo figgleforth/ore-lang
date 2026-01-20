@@ -11,7 +11,7 @@ module Ore
 	HTTP_VERB_SEPARATOR        = '://'
 	INTERPOLATE_CHAR           = '|'
 	COMMENT_CHAR               = '#'
-	COMMENT_MULTILINE_CHAR     = '```'
+	FENCE_CHARS                = '```'
 	PREFIX                     = %w(! - + ~ not return)
 	INFIX                      = %w(
 		+ - ^ * ** / % ~ == === ? . .?

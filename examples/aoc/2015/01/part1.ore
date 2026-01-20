@@ -26,7 +26,7 @@ Your puzzle answer was 74.
 ```
 
 floor = 0
-input = Inout.read('ore/examples/aoc/2015/01/input.txt')
+input = Inout.read('examples/aoc/2015/01/input.txt')
 for input
 	if it == "("
 		floor += 1
