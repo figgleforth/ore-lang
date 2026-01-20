@@ -2134,6 +2134,7 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp '```
 		some content
 		```'
+		# Fences unless subclassed will always be instances of Ore::Fence. The html example below transforms the fence into a ::String
 		assert_instance_of Ore::Fence, out
 		assert out.value.value.include?('some content')
 	end
@@ -2144,6 +2145,7 @@ class Interpreter_Test < Base_Test
 		```html
 		<h1>Welcome |name|</h1>
 		```"
+		assert_instance_of ::String, out
 		assert_equal '<h1>Welcome Cooper</h1>', out.strip
 	end
 
