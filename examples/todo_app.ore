@@ -112,10 +112,8 @@ Task.create({text: "Create RESTful API endpoints"})
 Task.create({text: "Build admin dashboard"})
 
 ```Server```
-App | Server {
-	port = 80
-
-	get:// home {->
+Tasks_Controller {
+	./home {->
 		tasks = Task.all()
 		Page_Layout([
 			H2('My Tasks'),
@@ -125,17 +123,29 @@ App | Server {
 		])
 	}
 
-	get://:id get_task { id ->
-		task = Task.find(id.to_i())
-		Page_Layout(Single_Task(task))
-	}
-
-	post://new {->
+	./create_task {->
 		id = Task.create({text: request.body.task })
 		# You can call response.redirect("/") to manually set the destination, or call the named route functions:
 		# home()
 		get_task(id)
 	}
+
+	get_task { id ->
+		task = Task.find(id.to_i())
+		Page_Layout(Single_Task(task))
+	}
+}
+
+App | Server {
+	port = 80
+
+	controller = Tasks_Controller()
+
+	get:// controller.home
+
+	get://:id controller.get_task
+
+	post://new Tasks_Controller.create_task
 
 	# note: The following routes prevent 500 errors since we're handling all routes here, nothing is filtered.
 	get://favicon.ico {->

@@ -410,18 +410,22 @@ module Ore
 			# Parse handler function (must follow route declaration).
 			# todo: Consider being able to use an existing identifier in place of a function expression
 			reduce_newlines
-			func = parse_func
+			expr = parse_expression
 
 			# Validate: handler params must include all route params
-			handler_params = func.expressions
-			                 .select { |expr| expr.is_a?(Ore::Param_Expr) }
-			                 .map(&:name)
-			                 .map(&:value)
+			handler_params = if expr.is_a? Ore::Func_Expr
+				expr.expressions
+				.select { |expr| expr.is_a?(Ore::Param_Expr) }
+				.map(&:name)
+				.map(&:value)
+			else
+				[]
+			end
 
 			missing_params = param_names - handler_params
 			unless missing_params.empty?
 				# todo: Add this error to src/runtime/errors.rb
-				raise "Route parameters #{missing_params.inspect} not found in handler parameters"
+				warn "Route parameters #{missing_params.inspect} not found in handler parameters. Handler #{expr} params: #{handler_params}"
 			end
 
 			route             = Ore::Route_Expr.new
@@ -430,7 +434,7 @@ module Ore
 				expr.kind  = :identifier
 			end
 			route.path        = path_string
-			route.expression  = func
+			route.expression  = expr
 			route.param_names = param_names
 
 			route
