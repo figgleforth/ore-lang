@@ -136,16 +136,16 @@ Tasks_Controller {
 	}
 }
 
-App | Server {
+App | Server | Tasks_Controller {
 	port = 80
 
 	controller = Tasks_Controller()
 
-	get:// controller.home
+	get:// controller.home # to controller instance
 
-	get://:id controller.get_task
+	get://:id get_task # to composed get_task
 
-	post://new Tasks_Controller.create_task
+	post://new Tasks_Controller.create_task # to static controller
 
 	# note: The following routes prevent 500 errors since we're handling all routes here, nothing is filtered.
 	get://favicon.ico {->
