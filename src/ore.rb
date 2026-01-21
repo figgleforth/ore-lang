@@ -20,10 +20,9 @@ require_relative 'runtime/server_runner'
 require_relative 'runtime/dom_renderer'
 require_relative 'runtime/interpreter'
 
-def assert(args) = Ore.assert(*args)
-
 module Ore
-	VERSION = "0.0.0"
+	ROOT_PATH             = File.expand_path('../', __dir__)
+	STANDARD_LIBRARY_PATH = File.join(ROOT_PATH, 'ore', 'preload.ore')
 
 	extend Helpers
 

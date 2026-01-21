@@ -1,6 +1,5 @@
 require 'webrick'
 require 'cgi'
-require_relative '../ore'
 
 module Ore
 	class Server_Runner
