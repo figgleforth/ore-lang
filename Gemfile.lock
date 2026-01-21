@@ -1,9 +1,18 @@
+PATH
+  remote: .
+  specs:
+    ore-lang (0.0.1)
+      listen (~> 3.9)
+      logger (~> 1.7)
+      sequel (~> 5.99)
+      webrick (~> 1.9)
+
 GEM
   remote: https://rubygems.org/
   specs:
     bigdecimal (4.0.1)
-    ffi (1.17.2)
-    ffi (1.17.2-arm64-darwin)
+    ffi (1.17.3)
+    ffi (1.17.3-arm64-darwin)
     listen (3.9.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
@@ -19,20 +28,17 @@ GEM
     sqlite3 (2.9.0)
       mini_portile2 (~> 2.8.0)
     sqlite3 (2.9.0-arm64-darwin)
-    webrick (1.9.1)
+    webrick (1.9.0)
 
 PLATFORMS
   arm64-darwin-24
   ruby
 
 DEPENDENCIES
-  listen (= 3.9.0)
-  logger (= 1.7.0)
   minitest (= 5.25.4)
+  ore-lang!
   rake (= 13.3.0)
-  sequel (= 5.99.0)
   sqlite3 (= 2.9.0)
-  webrick (= 1.9.1)
 
 RUBY VERSION
    ruby 3.4.1p0

@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	class Type_Checker < Stage
 		def output

@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	class Scope
 		attr_accessor :enclosing_scope, :sibling_scopes, :declarations, :name

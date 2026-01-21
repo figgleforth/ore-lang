@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	class Lexer < Stage
 		attr_accessor :i, :col, :line, :source_file

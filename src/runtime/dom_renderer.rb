@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	class Dom_Renderer
 		HTML_PREFIX  = 'html_'.freeze

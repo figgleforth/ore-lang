@@ -1,5 +1,4 @@
 module Ore
-	STANDARD_LIBRARY_PATH      = './ore/preload.ore'
 	RUNTIME_SCOPE_OPERATOR     = '@'
 	NIL_INIT_POSTFIX           = ';'
 	FUNCTION_DELIMITER         = '->'
