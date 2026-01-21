@@ -15,11 +15,11 @@ Nil {}
 Range {}
 
 Tuple {
-	values;
+	values,
 }
 
 Bool {
-	truthiness;
+	truthiness,
 
 	new { value = true ->
 		.truthiness = value != false

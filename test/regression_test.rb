@@ -175,7 +175,7 @@ class Regression_Test < Base_Test
 		refute_raises Ore::Undeclared_Identifier do
 			out = Ore.interp "
 			Thing {
-				id;
+				id,
 				name = 'Thingy'
 
 				new { new_name = '', id = 123 ->
@@ -194,8 +194,8 @@ class Regression_Test < Base_Test
 		assert_raises Ore::Missing_Argument do
 			out = Ore.interp "
 			Thing {
-				id;
-				name = 'Thingy';
+				id,
+				name = 'Thingy',
 
 				new { new_name, id ->
 					.name = new_name
@@ -283,10 +283,10 @@ class Regression_Test < Base_Test
 	end
 
 	def test_nested_type_declaration_shadowing_regression
-		# When creating an instance of an inner Type (like Title) inside an outer Type's render function (like Layout), declarations in the inner Type's body (like `title;`) were incorrectly being assigned to the outer Type's instance if it had the same identifier name. This test ensures each Type/Instance has its own namespace.
+		# When creating an instance of an inner Type (like Title) inside an outer Type's render function (like Layout), declarations in the inner Type's body (like `title,`) were incorrectly being assigned to the outer Type's instance if it had the same identifier name. This test ensures each Type/Instance has its own namespace.
 		out = Ore.interp <<~CODE
 		    Outer {
-		    	name;
+		    	name,
 
 		    	new { name ->
 		    		.name = name
@@ -298,7 +298,7 @@ class Regression_Test < Base_Test
 		    }
 
 		    Inner {
-		    	name;
+		    	name,
 
 		    	new { name ->
 		    		.name = name
@@ -366,7 +366,7 @@ class Regression_Test < Base_Test
 		refute_raises Ore::Missing_Super_Proxy_Declaration do
 			Ore.interp <<~ORE
 			    Thing {
-			    	./abc;
+			    	./abc,
 			    	./def {->}
 			    }
 
@@ -408,7 +408,7 @@ class Regression_Test < Base_Test
 	end
 
 	def test_ranges_with_expression
-		assert_instance_of Ore::Range, Ore.interp("x=1; 0..x")
-		assert_instance_of Ore::Range, Ore.interp("x=1; y=2; 0..(x + y)")
+		assert_instance_of Ore::Range, Ore.interp("x=1, 0..x")
+		assert_instance_of Ore::Range, Ore.interp("x=1, y=2, 0..(x + y)")
 	end
 end

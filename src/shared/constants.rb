@@ -1,7 +1,7 @@
 module Ore
 	STANDARD_LIBRARY_PATH      = './ore/preload.ore'
 	RUNTIME_SCOPE_OPERATOR     = '@'
-	NIL_INIT_POSTFIX           = ';'
+	NIL_INIT_POSTFIX           = ','
 	FUNCTION_DELIMITER         = '->'
 	IMPORT_FILE_DIRECTIVE      = 'use'
 	FOR_VERBS                  = %w(each map select reject count)

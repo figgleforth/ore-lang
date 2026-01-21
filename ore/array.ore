@@ -1,5 +1,5 @@
 Array {
-	values;
+	values,
 
 	new { values ->
 		.values = values

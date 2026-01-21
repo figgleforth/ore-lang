@@ -23,7 +23,7 @@ class Error_Test < Base_Test
 
 	def test_cannot_assign_incompatible_type
 		error = assert_raises Ore::Cannot_Assign_Incompatible_Type do
-			Ore.interp 'Person { name; }, Person = 5'
+			Ore.interp 'Person { name, }, Person = 5'
 		end
 	end
 
@@ -47,7 +47,7 @@ class Error_Test < Base_Test
 
 	def test_invalid_unpack_infix_operator
 		error = assert_raises Ore::Invalid_Unpack_Infix_Operator do
-			Ore.interp 'Point { x; y; }, p = Point(), @ * p'
+			Ore.interp 'Point { x, y, }, p = Point(), @ * p'
 		end
 	end
 

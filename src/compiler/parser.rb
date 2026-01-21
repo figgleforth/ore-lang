@@ -483,7 +483,8 @@ module Ore
 		def parse_nil_init_expr
 			start = curr_lexeme
 
-			expr          = Ore::Infix_Expr.new
+			expr          = Ore::Nil_Init_Expr.new
+			expr.lexeme   = start
 			expr.left     = parse_identifier_expr
 			expr.operator = Lexeme.new(:operator, '=')
 
@@ -544,9 +545,13 @@ module Ore
 				# elsif curr? SCOPE_OPERATORS
 				# 	parse_operator_expr
 
-			elsif curr? [';', ',', '->']
+			elsif curr? [',', '->']
 				# todo: Don't just discard the comma, make tuples implied when commas are found in #complete_expression
 				eat and nil
+
+			elsif curr? ';'
+				# This is reserved for function declarations
+				raise "; is reserverd as function header and body delimiter"
 
 			elsif curr? :delimiter
 				reduce_newlines and nil

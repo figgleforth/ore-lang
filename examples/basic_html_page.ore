@@ -11,8 +11,8 @@ Page_Body | Body {
 
 ```Layout component```
 Layout | Html {
-	title;
-	body_content;
+	title,
+	body_content,
 
 	css_filter = 'invert()'
 	css_font_family = 'monospace'
@@ -41,7 +41,7 @@ Hero | Section {
 }
 
 Code_Example | Pre {
-	subject;
+	subject,
 
 	css_margin_left = '2em'
 	css_background_color = '#ccc'
@@ -53,8 +53,8 @@ Code_Example | Pre {
 
 ```Feature section component```
 Feature_Section | Dom {
-	heading;
-	items;
+	heading,
+	items,
 
 	new { heading, items ->
 		.heading = heading
@@ -71,7 +71,7 @@ Feature_Section | Dom {
 
 ```Individual feature item```
 Feature_Item | Dom {
-	text;
+	text,
 
 	new { text ->
 		.text = text
@@ -84,7 +84,7 @@ Feature_Item | Dom {
 
 ```Main content container```
 Page_Content | Div {
-	snippet;
+	snippet,
 
 	new { snippet ->
 		.snippet = snippet
@@ -157,7 +157,7 @@ Page_Content | Div {
 }
 
 readme_snippet = "Hello {
-	subject;
+	subject,
 
 	new { subject ->
 		.subject = subject

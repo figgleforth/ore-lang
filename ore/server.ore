@@ -1,22 +1,22 @@
 Request {
-	path;
-	method;
-	query;
-	params;
-	headers;
-	body;
+	path,
+	method,
+	query,
+	params,
+	headers,
+	body,
 }
 
 Response {
-	status;
-	headers;
-	body;
+	status,
+	headers,
+	body,
 
 	redirect { location -> @super }
 }
 
 Server {
-	port;
+	port,
 
 	new { port = 80 ->
 		.port = port

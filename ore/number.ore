@@ -1,7 +1,7 @@
 Number {
-	denominator;
-	numerator;
-	type;
+	denominator,
+	numerator,
+	type,
 
 	new { num ->
 		.numerator = num

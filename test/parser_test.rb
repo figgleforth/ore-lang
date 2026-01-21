@@ -171,7 +171,7 @@ class Parser_Test < Base_Test
 		assert_kind_of Ore::Number_Expr, out.first.right
 		assert_equal 1, out.count
 
-		out = Ore.parse 'numbers;'
+		out = Ore.parse 'numbers,'
 		assert_kind_of Ore::Infix_Expr, out.first
 		assert_kind_of Ore::Identifier_Expr, out.first.left
 		assert_equal '=', out.first.operator.value
@@ -271,8 +271,8 @@ class Parser_Test < Base_Test
 	def test_comma_separated_expressions
 		out = Ore.parse 'a, B, 5, "cool"'
 		assert_equal 4, out.count
-		assert_kind_of Ore::Identifier_Expr, out[0]
-		assert_kind_of Ore::Identifier_Expr, out[1]
+		assert_kind_of Ore::Infix_Expr, out[0]
+		assert_kind_of Ore::Infix_Expr, out[1]
 		assert_kind_of Ore::Number_Expr, out[2]
 		assert_kind_of Ore::String_Expr, out[3]
 	end
@@ -445,8 +445,8 @@ class Parser_Test < Base_Test
 		assert_equal 'String', out.first.name.value
 
 		out = Ore.parse 'Transform {
-			position;
-			rotation;
+			position,
+			rotation,
 		}'
 		assert_equal 2, out.first.expressions.count
 
@@ -676,14 +676,14 @@ class Parser_Test < Base_Test
 	end
 
 	def test_possibly_ambigous_type_and_func_syntax_mixture
-		out = Ore.parse 'x ; y ; z'
+		out = Ore.parse 'x , y , z'
 		assert_kind_of Ore::Infix_Expr, out.first
 		assert_kind_of Ore::Infix_Expr, out[1]
 		assert_kind_of Ore::Identifier_Expr, out.last
 
 		out = Ore.parse 'x , y , z'
-		assert_kind_of Ore::Identifier_Expr, out.first
-		assert_kind_of Ore::Identifier_Expr, out[1]
+		assert_kind_of Ore::Infix_Expr, out.first
+		assert_kind_of Ore::Infix_Expr, out[1]
 		assert_kind_of Ore::Identifier_Expr, out.last
 	end
 
@@ -691,7 +691,7 @@ class Parser_Test < Base_Test
 		out = Ore.parse 'Identifier {->}'
 		assert_kind_of Ore::Type_Expr, out.first
 
-		# out = Ore.parse 'x; , y; , z;'
+		# out = Ore.parse 'x, , y, , z,'
 		# assert_kind_of Ore::Postfix_Expr, out.first
 		# assert_kind_of Ore::Postfix_Expr, out[1]
 		# assert_kind_of Ore::Postfix_Expr, out.last
@@ -772,7 +772,7 @@ class Parser_Test < Base_Test
 
 		assert_instance_of Ore::Html_Fence_Expr, out.first
 	end
-	
+
 	def test_skip_and_stop_are_operators
 		out = Ore.parse 'skip'
 		assert_instance_of Ore::Operator_Expr, out.first
@@ -804,7 +804,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_fence_expr_attributes
-		out = Ore.parse '```
+		out   = Ore.parse '```
 		some content here
 		```'
 		fence = out.first
@@ -816,7 +816,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_fence_expr_multiline_content
-		out = Ore.parse '```
+		out   = Ore.parse '```
 		line one
 		line two
 		line three
@@ -831,7 +831,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_html_fence_expr_attributes
-		out = Ore.parse '```html
+		out        = Ore.parse '```html
 		<div>Hello</div>
 		```'
 		html_fence = out.first
@@ -844,7 +844,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_html_fence_expr_with_interpolation
-		out = Ore.parse '```html
+		out        = Ore.parse '```html
 		<h1>Welcome |name|</h1>
 		```'
 		html_fence = out.first
@@ -855,7 +855,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_html_fence_expr_without_interpolation
-		out = Ore.parse '```html
+		out        = Ore.parse '```html
 		<p>Plain text</p>
 		```'
 		html_fence = out.first
@@ -865,7 +865,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_html_fence_strips_html_marker
-		out = Ore.parse '```html
+		out        = Ore.parse '```html
 		<span>Content</span>
 		```'
 		html_fence = out.first

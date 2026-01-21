@@ -363,11 +363,11 @@ class Lexer_Test < Base_Test
 	end
 
 	def test_allowed_identifier_special_chars
-		out = Ore.lex 'what?;'
+		out = Ore.lex 'what?,'
 		assert_equal :identifier, out.first.type
 		assert_equal 'what?', out.first.value
 
-		out = Ore.lex 'okay!;'
+		out = Ore.lex 'okay!,'
 		assert_equal :identifier, out.first.type
 		assert_equal 'okay!', out.first.value
 	end
@@ -402,8 +402,8 @@ class Lexer_Test < Base_Test
 	def test_multiline_code_location
 		out = Ore.lex <<~LEX
 		    Thing {
-		    	id;
-		    	name;
+		    	id,
+		    	name,
 		    }
 
 		    for 1..2
