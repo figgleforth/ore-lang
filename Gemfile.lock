@@ -5,6 +5,7 @@ PATH
       listen (~> 3.9)
       logger (~> 1.7)
       sequel (~> 5.99)
+      sqlite3 (~> 2.9.0)
       webrick (~> 1.9)
 
 GEM

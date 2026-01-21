@@ -19,4 +19,5 @@ Gem::Specification.new do |spec|
 	spec.add_dependency 'listen', '~> 3.9'
 	spec.add_dependency 'sequel', '~> 5.99'
 	spec.add_dependency 'logger', '~> 1.7'
+	spec.add_dependency 'sqlite3', '~> 2.9.0'
 end
