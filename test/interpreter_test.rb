@@ -2198,4 +2198,21 @@ class Interpreter_Test < Base_Test
 		assert out.value.value.include?('line 1')
 		assert out.value.value.include?('line 2')
 	end
+
+	# note: The idea is, given (abc,1)
+	# if abc exists, use that value
+	# if not abc exists, declare abc=nil
+	def test_new_comma_nil_init
+		out = Ore.interp <<~CODE
+		    x = (abc,1)    # declares abc = nil
+			(x, abc)
+		CODE
+		# [[nil, 1], nil]
+		assert_equal [nil, 1], out.values.first.values
+
+		out = Ore.interp <<~CODE
+		    abc=2, (abc,1),
+		CODE
+		assert_equal [2, 1], out.values
+	end
 end

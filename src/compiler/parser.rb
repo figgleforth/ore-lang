@@ -602,7 +602,7 @@ module Ore
 				expr.is it
 			end
 
-			if scope_prefix
+			if scope_prefix && !expr.is_a?(Ore::Nil_Init_Expr)
 				next_expr = begin_expression precedence
 				if next_expr.is_a? Ore::Infix_Expr
 					expr            = Ore::Prefix_Expr.new
@@ -639,6 +639,7 @@ module Ore
 					it.left     = expr
 					it.operator = eat
 					it.right    = parse_expression precedence_for it.operator.value
+					it.right    = it.right.left if it.right.is_a? Ore::Nil_Init_Expr
 
 					copy_location it, expr
 					return complete_expression it, precedence
@@ -647,6 +648,7 @@ module Ore
 					it.left     = expr
 					it.operator = eat
 					it.right    = parse_expression
+					it.right    = it.right.left if it.right.is_a? Ore::Nil_Init_Expr
 
 					copy_location it, expr
 					return complete_expression it, precedence
@@ -665,6 +667,7 @@ module Ore
 						expr.left     = left
 						expr.operator = eat(curr_lexeme.value)
 						expr.right    = parse_expression curr_operator_prec
+						expr.right    = expr.right.left if expr.right.is_a? Ore::Nil_Init_Expr
 						copy_location expr, left
 
 						if expr.left.is(Ore::Identifier_Expr) && expr.operator.value == '.' && expr.right.is(Ore::Number_Expr) && expr.right.type == :float
