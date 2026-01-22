@@ -41,7 +41,11 @@ module Ore
 		end
 
 		def load_file_into_scope filepath, into_scope
-			resolved_path = File.expand_path filepath
+			resolved_path = if filepath.start_with? 'ore/'
+				File.join ROOT_PATH, filepath
+			else
+				File.expand_path filepath
+			end
 			push_scope into_scope
 
 			unless loaded_files[resolved_path]

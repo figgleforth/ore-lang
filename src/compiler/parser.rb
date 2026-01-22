@@ -306,7 +306,7 @@ module Ore
 
 			it.expressions = it.expressions.compact
 
-			eat '}' and assert !curr?('}')
+			eat '}' and Ore.assert !curr?('}')
 
 			it
 			copy_location it, start

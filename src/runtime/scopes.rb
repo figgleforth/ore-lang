@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	class Scope
 		attr_accessor :enclosing_scope, :sibling_scopes, :declarations, :name
@@ -202,6 +200,10 @@ module Ore
 
 		def proxy_get index
 			get index
+		end
+
+		def proxy_random
+			values.sample
 		end
 
 		def proxy_concat other_array

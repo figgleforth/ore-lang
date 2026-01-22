@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	class Interpreter < Stage
 		attr_accessor :i, :runtime

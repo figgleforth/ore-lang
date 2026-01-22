@@ -1,5 +1,3 @@
-require_relative '../ore'
-
 module Ore
 	# A proof of concept to see what a documentation stage might look like
 	class Documenter < Stage
