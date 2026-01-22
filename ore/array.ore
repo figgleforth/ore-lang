@@ -6,6 +6,7 @@ Array {
 	}
 
 	push { item -> @super }
+	random { -> @super }
 	pop { -> @super }
 	shift { -> @super }
 	unshift { item -> @super }

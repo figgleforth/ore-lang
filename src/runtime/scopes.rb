@@ -202,6 +202,10 @@ module Ore
 			get index
 		end
 
+		def proxy_random
+			values.sample
+		end
+
 		def proxy_concat other_array
 			values.concat other_array.values
 		end
