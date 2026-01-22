@@ -483,7 +483,8 @@ module Ore
 		def parse_nil_init_expr
 			start = curr_lexeme
 
-			expr          = Ore::Infix_Expr.new
+			expr          = Ore::Nil_Init_Expr.new
+			expr.lexeme   = start
 			expr.left     = parse_identifier_expr
 			expr.operator = Lexeme.new(:operator, '=')
 
@@ -544,9 +545,13 @@ module Ore
 				# elsif curr? SCOPE_OPERATORS
 				# 	parse_operator_expr
 
-			elsif curr? [';', ',', '->']
+			elsif curr? [',', '->']
 				# todo: Don't just discard the comma, make tuples implied when commas are found in #complete_expression
 				eat and nil
+
+			elsif curr? ';'
+				# This is reserved for function declarations
+				raise "; is reserverd as function header and body delimiter"
 
 			elsif curr? :delimiter
 				reduce_newlines and nil
@@ -597,7 +602,7 @@ module Ore
 				expr.is it
 			end
 
-			if scope_prefix
+			if scope_prefix && !expr.is_a?(Ore::Nil_Init_Expr)
 				next_expr = begin_expression precedence
 				if next_expr.is_a? Ore::Infix_Expr
 					expr            = Ore::Prefix_Expr.new
@@ -634,6 +639,7 @@ module Ore
 					it.left     = expr
 					it.operator = eat
 					it.right    = parse_expression precedence_for it.operator.value
+					it.right    = it.right.left if it.right.is_a? Ore::Nil_Init_Expr
 
 					copy_location it, expr
 					return complete_expression it, precedence
@@ -642,6 +648,7 @@ module Ore
 					it.left     = expr
 					it.operator = eat
 					it.right    = parse_expression
+					it.right    = it.right.left if it.right.is_a? Ore::Nil_Init_Expr
 
 					copy_location it, expr
 					return complete_expression it, precedence
@@ -660,6 +667,7 @@ module Ore
 						expr.left     = left
 						expr.operator = eat(curr_lexeme.value)
 						expr.right    = parse_expression curr_operator_prec
+						expr.right    = expr.right.left if expr.right.is_a? Ore::Nil_Init_Expr
 						copy_location expr, left
 
 						if expr.left.is(Ore::Identifier_Expr) && expr.operator.value == '.' && expr.right.is(Ore::Number_Expr) && expr.right.type == :float

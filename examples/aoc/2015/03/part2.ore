@@ -15,8 +15,8 @@ For example:
 ```
 
 Vec2 {
-	x;
-	y;
+	x,
+	y,
 
 	new {x, y ->
 		.x = x

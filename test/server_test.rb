@@ -8,7 +8,7 @@ class Server_Test < Base_Test
 	def test_server_instance_creation
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 3000 ->
 		    		.port = port
 		    	}
@@ -25,7 +25,7 @@ class Server_Test < Base_Test
 	def test_web_app_with_server_composition
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 3001 ->
 		    		.port = port
 		    	}
@@ -48,7 +48,7 @@ class Server_Test < Base_Test
 	def test_route_defined_in_server_type
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 3002 ->
 		    		.port = port
 		    	}
@@ -79,7 +79,7 @@ class Server_Test < Base_Test
 	def test_server_runner_initialization
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 8888 ->
 		    		.port = port
 		    	}
@@ -100,7 +100,7 @@ class Server_Test < Base_Test
 	def test_route_collection
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 3003 ->
 		    		.port = port
 		    	}
@@ -131,7 +131,7 @@ class Server_Test < Base_Test
 	def test_route_matching
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 3004 ->
 		    		.port = port
 		    	}
@@ -174,7 +174,7 @@ class Server_Test < Base_Test
 	def test_url_param_extraction
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = 3005 ->
 		    		.port = port
 		    	}

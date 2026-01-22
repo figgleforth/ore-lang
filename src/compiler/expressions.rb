@@ -127,6 +127,9 @@ module Ore
 		attr_accessor :grouping, :expressions
 	end
 
+	class Nil_Init_Expr < Infix_Expr
+	end
+
 	class Operator_Expr < Expression
 		attr_accessor :custom, :precedence
 	end

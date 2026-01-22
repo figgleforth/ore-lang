@@ -59,7 +59,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_nil_assignment_operator
-		out = Ore.interp 'nothing;'
+		out = Ore.interp 'nothing,'
 		assert_instance_of NilClass, out
 	end
 
@@ -147,7 +147,7 @@ class Interpreter_Test < Base_Test
 
 	def test_inbody_type_composition_declaration
 		out = Ore.interp 'Numeric {
-			numerator;
+			numerator,
 		}
 		Number | Numeric {}
 		Float {
@@ -164,7 +164,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_potential_colon_ambiguity
-		out = Ore.interp 'assign_to_nil;'
+		out = Ore.interp 'assign_to_nil,'
 		assert_instance_of NilClass, out
 
 		out = Ore.interp 'func { assign_to_nil -> }'
@@ -513,8 +513,8 @@ class Interpreter_Test < Base_Test
 
 	def test_complex_type_declaration
 		out = Ore.interp 'Transform {
-			position;
-			rotation;
+			position,
+			rotation,
 
 			x = 0
 			y = 0
@@ -550,8 +550,8 @@ class Interpreter_Test < Base_Test
 
 	def test_complex_type_init
 		out = Ore.interp 'Transform {
-			position;
-			rotation;
+			position,
+			rotation,
 
 			x = 4
 			y = 8
@@ -874,8 +874,8 @@ class Interpreter_Test < Base_Test
 
 	def test_nil_instances_are_shared
 		out = Ore.interp '
-		x;
-		y;
+		x,
+		y,
 
 		equal = x == y
 		(x, y, equal)'
@@ -970,7 +970,7 @@ class Interpreter_Test < Base_Test
 				a = 1
 			}
 			Bb {
-				a = 4; b = 2; unique = 10
+				a = 4, b = 2, unique = 10
 			}
 
 			Union | Aa | Bb {}
@@ -1018,8 +1018,8 @@ class Interpreter_Test < Base_Test
 
 	def test_intersection_composition
 		shared_code = "
-			Aa { a = 4;  common = 8 }
-			Bb { b = 15; common = 16 }
+			Aa { a = 4,  common = 8 }
+			Bb { b = 15, common = 16 }
 
 			Intersected | Aa & Bb {}
 
@@ -1044,8 +1044,8 @@ class Interpreter_Test < Base_Test
 
 	def test_symmetric_difference_composition
 		shared_code = "
-			Aa { a = 4; common = 10 }
-			Bb { b = 8; common = 10 }
+			Aa { a = 4, common = 10 }
+			Bb { b = 8, common = 10 }
 
 			Sym_Diff | Aa ^ Bb {}
 			s = Sym_Diff()\n"
@@ -1070,7 +1070,7 @@ class Interpreter_Test < Base_Test
 	def test_composition_with_inbody_declarations
 		out = Ore.interp "
 		Aa { a = 15 }
-		Bb { a = 16; b; }
+		Bb { a = 16, b, }
 		Union {
 			# With or without space is valid
 			| Aa
@@ -1114,7 +1114,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_loading_external_source_files
-		out = Ore.interp "@use 'ore/preload.ore'; (Bool, Bool())"
+		out = Ore.interp "@use 'ore/preload.ore', (Bool, Bool())"
 
 		assert_instance_of Ore::Type, out.values[0]
 		assert_kind_of Ore::Instance, out.values[1]
@@ -1681,7 +1681,7 @@ class Interpreter_Test < Base_Test
 		    	_private = 8
 
 				# Static declarations
-				./nilled;
+				./nilled,
 		    	./static = 15
 		    	./_static_private = 16
 
@@ -2197,5 +2197,22 @@ class Interpreter_Test < Base_Test
 		assert_instance_of Ore::Fence, out
 		assert out.value.value.include?('line 1')
 		assert out.value.value.include?('line 2')
+	end
+
+	# note: The idea is, given (abc,1)
+	# if abc exists, use that value
+	# if not abc exists, declare abc=nil
+	def test_new_comma_nil_init
+		out = Ore.interp <<~CODE
+		    x = (abc,1)    # declares abc = nil
+			(x, abc)
+		CODE
+		# [[nil, 1], nil]
+		assert_equal [nil, 1], out.values.first.values
+
+		out = Ore.interp <<~CODE
+		    abc=2, (abc,1),
+		CODE
+		assert_equal [2, 1], out.values
 	end
 end

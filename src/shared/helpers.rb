@@ -12,11 +12,13 @@ module Helpers
 	end
 
 	def type_identifier? ident
+		return false unless ident
 		# Capitalized Like_This or This
 		ident[0] && ident[0].upcase == ident[0] && !constant_identifier?(ident)
 	end
 
 	def member_identifier? ident
+		return false unless ident
 		# lowercased_FIRST_LETTER, lIKE_THIS or thIS or this
 		ident[0] && ident[0].downcase == ident[0]
 	end
@@ -25,7 +27,7 @@ module Helpers
 		ident = ident&.to_s
 		return :operator if %w(and or not unless return).include? ident
 
-		without_leading__ = ident.gsub(/^_+/, '')
+		without_leading__ = ident&.gsub(/^_+/, '')
 
 		if constant_identifier? without_leading__
 			:IDENTIFIER

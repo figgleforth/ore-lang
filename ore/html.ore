@@ -1,7 +1,7 @@
 ```Generic Dom element, set `html_element=` to the element you want to render```
 Dom {
 	html_element = 'div'
-	children;
+	children,
 
 	new { children = [] ->
 		.children = children
@@ -25,7 +25,7 @@ Body | Dom {
 
 Title | Dom {
 	html_element = 'title'
-	title;
+	title,
 
 	new { title ->
 		.title = title
@@ -74,8 +74,8 @@ Span | Dom {
 
 A | Dom {
 	html_element = 'a'
-	html_href;
-	title;
+	html_href,
+	title,
 
 	new { href, title ->
 		html_href = href

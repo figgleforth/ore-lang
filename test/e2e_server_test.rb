@@ -20,7 +20,7 @@ class E2E_Server_Test < Minitest::Test
 	def test_server_starts_and_responds
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = #{@port} ->
 		    		.port = port
 		    	}
@@ -69,7 +69,7 @@ class E2E_Server_Test < Minitest::Test
 	def test_query_parameters
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = #{@port} ->
 		    		.port = port
 		    	}
@@ -102,7 +102,7 @@ class E2E_Server_Test < Minitest::Test
 	def test_post_route
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port = #{@port} ->
 		    		.port = port
 		    	}
@@ -138,7 +138,7 @@ class E2E_Server_Test < Minitest::Test
 
 		code = <<~ORE
 		    Server {
-		    	port;
+		    	port,
 		    	new { port ->
 		    		.port = port
 		    	}

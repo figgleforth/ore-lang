@@ -1,10 +1,10 @@
 # todo: Document all members
 
 String {
-	value;
+	value,
 
-	length; # Total number of characters
-	ord; # Integer ordinal of the first character
+	length, # Total number of characters
+	ord, # Integer ordinal of the first character
 
 	new { value = '' ->
 		.value = value

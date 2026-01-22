@@ -16,7 +16,7 @@ Page_Layout | Html {
 }
 
 Single_Task | Div {
-	task;
+	task,
 
 	new { task = 'New Task' ->
 		.task = task
@@ -28,8 +28,8 @@ Single_Task | Div {
 }
 
 Task_Item | Li {
-	id;
-	text;
+	id,
+	text,
 
 	new { task ->
 		.text = task[:text]
@@ -42,7 +42,7 @@ Task_Item | Li {
 }
 
 List_Of_Tasks | Ul {
-	tasks;
+	tasks,
 
 	new { tasks = [] ->
 		.tasks = tasks

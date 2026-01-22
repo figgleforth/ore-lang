@@ -521,6 +521,26 @@ module Ore
 			end
 		end
 
+		# The values for expr.operator, expr.left, and expr.right should all exist by this point
+		# @param expr [Ore::Nil_Init_Expr]
+		def interp_nil_init expr
+			# attr_accessor :operator, :left, :right
+			begin
+				left = interpret expr.left
+				return left if left
+			rescue # Ore::Undeclared_Identifier is the expected error
+				# Use the correct scope based on scope operator (e.g., ./ for static declarations)
+				scope = scope_for_identifier(expr.left) || runtime.stack.last
+				scope.declare expr.left.value, interpret(expr.right)
+
+				# Track static declarations (same as in interp_infix_equals)
+				if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
+					scope.static_declarations ||= Set.new
+					scope.static_declarations.add expr.left.value.to_s
+				end
+			end
+		end
+
 		# @param expr [Ore::Infix_Expr]
 		def interp_infix expr
 			case expr.operator.value
@@ -1449,6 +1469,10 @@ module Ore
 
 			when Ore::Prefix_Expr
 				interp_prefix expr
+
+			when Ore::Nil_Init_Expr
+				# This is a special infix expression `<ident>,` where left is assigned nil if it doesn't exist, or is returned if it does
+				interp_nil_init expr
 
 			when Ore::Infix_Expr
 				interp_infix expr

@@ -1,5 +1,5 @@
 Greet {
-	subject;
+	subject,
 
 	new { subject ->
 		.subject = subject
