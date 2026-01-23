@@ -18,7 +18,7 @@ Example code from [examples/hello.ore](./examples/hello.ore):
 
 ```ore
 Greet {
-	subject;
+	subject,
 
 	new { subject;
 		.subject = subject
@@ -99,8 +99,9 @@ Greet('Ore').greeting()
 ```
 # Comments start with a hash
 
-nothing;            # Syntactic sugar for "nothing = nil"
+nothing,            # Syntactic sugar for "nothing = nil"
 something = true
+okay_too = 42,      # Comma allowed as expression separator
 
 # Strings can be single or double quoted, and interpolated with backticks
 LANG_NAME = "ore-lang"
@@ -158,11 +159,11 @@ fizz_buzz { n;
 # Syntax: <class_name> { <body> }
 
 Repo {
-	user;
-	name;
+	user,
+	name,
 
 	# "new" is reserved for constructors
-	new { user, name
+	new { user, name;
 		.user = user
 		.name = name
 	}
@@ -185,6 +186,28 @@ for [1, 2, 3, 4, 5]
 end
 # result = [1, 2, 3, 4, 5]
 
+# Map, select, reject, etc...
+for [1, 2, 3] map
+	it * 2
+end
+
+# Stride support with "by" keyword
+for [1, 2, 3, 4] select by 2
+	it # [1, 2] or [2, 4]
+end
+
+for [1, 2, 3, 4] reject by 2,1 # the overlap amount
+	it # [1, 2] or [2, 3] or [3,4]
+end
+
+for [1, 2, 3, 4, 5, 6, 7] each by 3,1
+	it # [1,2,3] or [3,4,5] or [5,6,7] ...
+end
+
+for [1, 2, 3, 4, 5, 6, 7, 8] each by 4,2
+	it # [1,2,3,4] or [3,4,5,6] or [5,6,7,8] ...
+end
+
 # Ranges work too
 sum = 0
 for 1..10
@@ -192,14 +215,7 @@ for 1..10
 end
 # sum = 55
 
-# Stride support with "by" keyword
-chunks = []
-for [1, 2, 3, 4, 5, 6] by 2
-	chunks << it  # it contains array of 2 items
-end
-# chunks = [[1, 2], [3, 4], [5, 6]]
-
-# Access iteration index with "at"
+# Access iteration index with `at`
 indexed = []
 for ['a', 'b', 'c']
 	indexed << "`at`: `it`"
@@ -224,8 +240,8 @@ end
 
 ```ore
 Vector {
-	x;
-	y;
+	x,
+	y,
 
 	new { x, y;
 		.x = x
@@ -352,8 +368,8 @@ Using built-in `Dom` composition:
 @use 'ore/html.ore'
 
 Layout | Dom {
-	title;
-	body_content;
+	title,
+	body_content,
 
 	new { title = 'My page', body_content = 'Hello!';
 		.title = title

@@ -20,7 +20,7 @@ module Ore
 		!= <= >= < > <=> < >
 		and or
 	)
-	POSTFIX                    = %w() # Be sure not to make ; a postfix operator because it behaves as postfix with a declaration but as a delimiter inside func param declarations.
+	POSTFIX                    = %w() # note: ; can never be a postfix, it's reserved
 	CIRCUMFIX                  = %w( \( [ { | )
 	CIRCUMFIX_GROUPINGS        = { '(' => '()', '{' => '{}', '[' => '[]', '|' => '||' }.freeze
 	LOGICAL_OPERATORS          = %w(&& & || | and or)
