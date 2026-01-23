@@ -97,7 +97,7 @@ Greet('Ore').greeting()
 #### Variables
 
 ```
-# Comments start with a backtick
+# Comments start with a hash
 
 nothing;            # Syntactic sugar for "nothing = nil"
 something = true
