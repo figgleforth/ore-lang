@@ -421,4 +421,14 @@ class Regression_Test < Base_Test
 		ORE
 		assert_equal 42, out
 	end
+
+	# Regression: sibling types should also be accessible from within functions (not just type body)
+	def test_use_with_variable_can_reference_sibling_types_in_function
+		out = Ore.interp <<~ORE
+		    lib = @use 'test/fixtures/use_with_variable_sibling_types.ore'
+		    m = lib.Main_Type()
+		    m.create_sibling_in_func()
+		ORE
+		assert_equal 42, out
+	end
 end

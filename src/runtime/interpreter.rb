@@ -875,8 +875,11 @@ module Ore
 			func.arguments = arg_values
 
 			# Push type scope if calling an instance method (instance methods need access to type-level declarations)
+			# Also push the type's enclosing_scope so sibling types can be found
 			if func.enclosing_scope.is_a?(Ore::Instance) && func.enclosing_scope.enclosing_scope
-				runtime.push_scope func.enclosing_scope.enclosing_scope # Push the Type
+				type = func.enclosing_scope.enclosing_scope
+				runtime.push_scope type.enclosing_scope if type.enclosing_scope # Push the Type's enclosing scope
+				runtime.push_scope type # Push the Type
 			end
 			runtime.push_scope func.enclosing_scope
 			runtime.push_scope func
@@ -914,7 +917,9 @@ module Ore
 			Ore.assert runtime.pop_scope == func.enclosing_scope
 
 			if func.enclosing_scope.is_a?(Ore::Instance) && func.enclosing_scope.enclosing_scope
-				Ore.assert runtime.pop_scope == func.enclosing_scope.enclosing_scope
+				type = func.enclosing_scope.enclosing_scope
+				Ore.assert runtime.pop_scope == type
+				runtime.pop_scope if type.enclosing_scope # Pop the Type's enclosing scope
 			end
 
 			result.is_a?(Ore::Return) ? result.value : result
