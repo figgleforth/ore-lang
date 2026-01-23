@@ -1,0 +1,13 @@
+# Regression test: types loaded via `variable = @use` should be able to reference sibling types
+
+Sibling_Type {
+	value = 42
+}
+
+Main_Type {
+	sibling = Sibling_Type()
+
+	get_sibling_value {;
+		sibling.value
+	}
+}

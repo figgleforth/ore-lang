@@ -711,8 +711,9 @@ module Ore
 		end
 
 		def interp_type expr
-			type             = Ore::Type.new expr.name.value
-			type.expressions = expr.expressions
+			type                 = Ore::Type.new expr.name.value
+			type.expressions     = expr.expressions
+			type.enclosing_scope = runtime.stack.last
 
 			ore_name = "Ore::#{expr.name.value}"
 			defined  = Object.const_defined? ore_name
@@ -788,23 +789,34 @@ module Ore
 			instance.enclosing_scope = type
 
 			# note: There was a bug here where I wasn't popping the instance after interpreting the type's expressions. That caused the #new function below (func_new) to not properly interpret arguments passed to it.
-			runtime.push_then_pop type do
-				runtime.push_then_pop instance do |scope|
-					type.expressions.each do |expr|
-						# Skip static declarations - they were already executed during type definition and shouldn't be re-executed for each instance
-						if expr.is_a?(Ore::Infix_Expr) && expr.operator&.value == '=' &&
-						   expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
-							next
-						end
+			# note: We push type.enclosing_scope first (when present) so sibling types declared in the same scope can be found during instantiation.
+			interpret_instance_body = -> do
+				runtime.push_then_pop type do
+					runtime.push_then_pop instance do |scope|
+						type.expressions.each do |expr|
+							# Skip static declarations - they were already executed during type definition and shouldn't be re-executed for each instance
+							if expr.is_a?(Ore::Infix_Expr) && expr.operator&.value == '=' &&
+							   expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
+								next
+							end
 
-						if expr.is_a?(Ore::Func_Expr) && expr.name.is_a?(Ore::Identifier_Expr) &&
-						   expr.name.scope_operator&.value == './'
-							next
-						end
+							if expr.is_a?(Ore::Func_Expr) && expr.name.is_a?(Ore::Identifier_Expr) &&
+							   expr.name.scope_operator&.value == './'
+								next
+							end
 
-						interpret expr
+							interpret expr
+						end
 					end
 				end
+			end
+
+			if type.enclosing_scope
+				runtime.push_then_pop type.enclosing_scope do
+					interpret_instance_body.call
+				end
+			else
+				interpret_instance_body.call
 			end
 
 			instance.declarations.each do |key, decl|

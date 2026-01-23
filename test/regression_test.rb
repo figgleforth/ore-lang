@@ -411,4 +411,14 @@ class Regression_Test < Base_Test
 		assert_instance_of Ore::Range, Ore.interp("x=1, 0..x")
 		assert_instance_of Ore::Range, Ore.interp("x=1, y=2, 0..(x + y)")
 	end
+
+	# Regression: types loaded via `variable = @use 'file.ore'` were missing enclosing_scope in interp_type
+	def test_use_with_variable_can_reference_sibling_types
+		out = Ore.interp <<~ORE
+		    lib = @use 'test/fixtures/use_with_variable_sibling_types.ore'
+		    m = lib.Main_Type()
+		    m.get_sibling_value()
+		ORE
+		assert_equal 42, out
+	end
 end
