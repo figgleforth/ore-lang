@@ -53,11 +53,23 @@ module Ore
 			query_params
 		end
 
+		# @param request [WEBrick::HTTPRequest, WEBrick::HTTPResponse]
 		def handle_request request, response, routes
 			path_string  = request.path
 			query_string = request.query_string
 			http_method  = request.request_method.downcase
 			path_parts   = request.path.split('/').reject { _1.empty? }
+
+			# Cookies! request.cookies gives us an array of WEBrick::Cookie
+			# note: The cookie is set below somewhere in a javascript snippet using the same key BROWSER_VIEW_SIZE. We read it here to then declare it in the global scope for Dom elements to use
+			if cookie = request.cookies.find { _1.name == BROWSER_VIEW_SIZE }
+				parts = cookie.value.split 'x'
+				size  = {
+					width:  parts[0].to_i,
+					height: parts[1].to_i
+				}
+				interpreter.runtime.stack.first.declare BROWSER_VIEW_SIZE, size
+			end
 
 			target_route = match_route http_method, path_parts, routes
 
@@ -99,6 +111,7 @@ module Ore
 					res = Ore::Response.new response
 					interpreter.link_instance_to_type res, 'Response'
 
+					# The route handler could return Html|Dom, Body|Dom etc, or even just a string. Sounds like I have to make sure the format of the final Html is correct
 					result = interpreter.interp_route_handler target_route, req, res, url_params, server_instance: @server_instance
 
 					# Apply response object's configuration to WEBrick response
@@ -106,6 +119,35 @@ module Ore
 					headers_hash    = res.declarations['headers'] || res.headers
 					headers_hash.each { |k, v| response.header[k] = v }
 					response.body = res.declarations['body'] || res.body_content.to_s
+					# todo: append or prepend javascript that will capture the window size, set a cookie for it, then reload or just change url location so WEBrick can read the cookie for window size
+					# This window size to be available to all Dom elements as an alternate to media queries which I'm unable to reproduce yet.
+					# Inject JavaScript here - modify response.body
+					if response.body.to_s =~ /<html|<body|<head/i
+						# todo: Move this to a .js file and load it
+						window_size_js = <<~JSCODE
+						    <script>
+						    (function() {
+						        var size = window.innerWidth + 'x' + window.innerHeight;
+						        if (document.cookie.indexOf('#{BROWSER_VIEW_SIZE}=' + size) === -1) {
+						            document.cookie = '#{BROWSER_VIEW_SIZE}=' + size + '; path=/';
+									console.log('Set cookie for window size!!!', size);
+						            window.location = '';
+						        }
+						    })();
+						    </script>
+						JSCODE
+
+						# Insert after <head> or <body> tag, or prepend
+						body_str = response.body.to_s
+						if body_str.include?('<head>')
+							response.body = body_str.sub('<head>', '<head>' + window_size_js)
+						elsif body_str.include?('<body>')
+							response.body = body_str.sub('<body>', '<body>' + window_size_js)
+						else
+							response.body = window_size_js + body_str
+						end
+					end
+
 					result
 
 				rescue WEBrick::HTTPStatus::Status

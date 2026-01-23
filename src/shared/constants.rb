@@ -8,6 +8,7 @@ module Ore
 	HTTP_VERBS                 = %w(get put patch post delete head options connect trace)
 	VOID_HTML_TAGS             = %w(area base br col command embed hr img input keygen link meta param source track wbr)
 	HTTP_VERB_SEPARATOR        = '://'
+	BROWSER_VIEW_SIZE          = 'browser_view_size'
 	INTERPOLATE_CHAR           = '`' # easily distinguishable betwen ```
 	COMMENT_CHAR               = '#'
 	FENCE_CHARS                = '```'
