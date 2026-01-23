@@ -164,7 +164,7 @@ readme_snippet = "Hello {
 	}
 
 	output {;
-		'Hi, \|subject\|'
+		'Hi, \`subject\`'
 	}
 }
 

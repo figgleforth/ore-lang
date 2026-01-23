@@ -13,7 +13,7 @@ Header | Dom {
 	css_color = 'green'
 
 	render {;
-		[H3("|children| Page"), A("/", "home"), Br(), A("/about", "about"), Br()]
+		[H3("`children` Page"), A("/", "home"), Br(), A("/about", "about"), Br()]
 	}
 }
 

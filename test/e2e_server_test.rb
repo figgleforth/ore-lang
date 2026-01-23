@@ -32,7 +32,7 @@ class E2E_Server_Test < Minitest::Test
 		    	}
 
 		    	get://hello/:name { name;
-		    		"<h1>Hello, |name|!</h1>"
+		    		"<h1>Hello, `name`!</h1>"
 		    	}
 		    }
 
@@ -77,7 +77,7 @@ class E2E_Server_Test < Minitest::Test
 
 		    Web_App | Server {
 		    	get://search {;
-		    		"Query: |request.query|"
+		    		"Query: `request.query`"
 		    	}
 		    }
 

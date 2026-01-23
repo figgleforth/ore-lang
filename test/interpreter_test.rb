@@ -907,7 +907,7 @@ class Interpreter_Test < Base_Test
 			}
 
 			to_s {;
-				'Transform(|x|,|y|)'
+				'Transform(`x`,`y`)'
 			}
 
 			scale! { value;
@@ -1262,7 +1262,7 @@ class Interpreter_Test < Base_Test
 		indices = []
 
 		for [4, 8, 15, 16, 23, 42]
-			indices << '|at|: |it|'
+			indices << '`at`: `it`'
 		end
 
 		indices"
@@ -1360,12 +1360,12 @@ class Interpreter_Test < Base_Test
 			skip if it == 4
 
 			if it % 2 == 0
-				result << 'START |it|'
+				result << 'START `it`'
 				for 0..10
 					result << it
 					stop if it == 2
 				end
-				result << 'STOP |it|'
+				result << 'STOP `it`'
 			end
 
 			if it == 6
@@ -1389,7 +1389,7 @@ class Interpreter_Test < Base_Test
 	def test_for_loop_map_with_index
 		out = Ore.interp "
 		for ['a', 'b', 'c'] map
-			'|at|:|it|'
+			'`at`:`it`'
 		end"
 		assert_equal ['0:a', '1:b', '2:c'], out.values
 	end
@@ -2143,7 +2143,7 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp "
 		name = 'Cooper'
 		```html
-		<h1>Welcome |name|</h1>
+		<h1>Welcome `name`</h1>
 		```"
 		assert_instance_of ::String, out
 		assert_equal '<h1>Welcome Cooper</h1>', out.strip
@@ -2164,7 +2164,7 @@ class Interpreter_Test < Base_Test
 			get:// home {;
 				title = 'My Page'
 				```html
-				<h1>|title|</h1>
+				<h1>`title`</h1>
 				```
 			}
 		}
@@ -2180,8 +2180,8 @@ class Interpreter_Test < Base_Test
 		count = 42
 		```html
 		<div>
-			<h1>Hello |name|</h1>
-			<p>You have |count| messages</p>
+			<h1>Hello `name`</h1>
+			<p>You have `count` messages</p>
 		</div>
 		```"
 		assert out.include?('Hello Alice')

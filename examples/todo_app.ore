@@ -23,7 +23,7 @@ Single_Task | Div {
 	}
 
 	render {;
-		[A('/', 'Back to all'), P("|id|: |task[:text]|")]
+		[A('/', 'Back to all'), P("`id`: `task[:text]`")]
 	}
 }
 
@@ -37,7 +37,7 @@ Task_Item | Li {
 	}
 
 	render {;
-		A("/|id|", "|id|: |text|")
+		A("/`id`", "`id`: `text`")
 	}
 }
 

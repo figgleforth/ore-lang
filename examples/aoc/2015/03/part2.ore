@@ -65,9 +65,9 @@ for input
 	end
 
 	key = if robo_santa
-		"|santa2.x|.|santa2.y|"
+		"`santa2.x`.`santa2.y`"
 	else
-		"|santa1.x|.|santa1.y|"
+		"`santa1.x`.`santa1.y`"
 	end
 
 	if visited.has_key?(key)

@@ -79,10 +79,10 @@ class Lexer_Test < Base_Test
 	end
 
 	def test_interpolated_strings
-		out = Ore.lex '"An |interpolated| string"'
+		out = Ore.lex '"An `interpolated` string"'
 		assert_equal :string, out.first.type
 
-		out = Ore.lex "'Another |interpolated| string'"
+		out = Ore.lex "'Another `interpolated` string'"
 		assert_equal :string, out.first.type
 	end
 

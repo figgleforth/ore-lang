@@ -60,7 +60,7 @@ class Server_Test < Base_Test
 		    	}
 
 		    	get://users/:id { id;
-		    		"User: |id|"
+		    		"User: `id`"
 		    	}
 		    }
 
@@ -139,11 +139,11 @@ class Server_Test < Base_Test
 
 		    Web_App | Server {
 		    	get://users/:id { id;
-		    		"User |id|"
+		    		"User `id`"
 		    	}
 
 		    	get://posts/:post_id/comments/:comment_id { post_id, comment_id;
-		    		"Post |post_id| Comment |comment_id|"
+		    		"Post `post_id` Comment `comment_id`"
 		    	}
 		    }
 
@@ -182,7 +182,7 @@ class Server_Test < Base_Test
 
 		    Web_App | Server {
 		    	get://users/:user_id/posts/:post_id { user_id, post_id;
-		    		"User |user_id| Post |post_id|"
+		    		"User `user_id` Post `post_id`"
 		    	}
 		    }
 

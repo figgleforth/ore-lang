@@ -35,7 +35,7 @@ for input
 		x += 1
 	end
 
-	key = "|x|.|y|"
+	key = "`x`.`y`"
 	if visited.has_key?(key)
 		visited[key] += 1
 	else

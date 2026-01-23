@@ -6,7 +6,7 @@ Greet {
 	}
 
 	greeting {;
-		"Hello, |subject|!"
+		"Hello, `subject`!"
 	}
 }
 

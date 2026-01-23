@@ -15,7 +15,7 @@ Your puzzle input is iwrupvqb.
 input = 'iwrupvqb'
 lowest = nil
 while true
-	test = "|input||at|".to_md5_hash()
+	test = "`input``at`".to_md5_hash()
 	if test.start_with?('00000')
 		lowest = at
 		stop

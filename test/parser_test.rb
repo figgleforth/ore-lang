@@ -92,11 +92,11 @@ class Parser_Test < Base_Test
 		assert_kind_of Ore::String_Expr, out.first
 		refute out.first.interpolated
 
-		out = Ore.parse '"An |interpolated| string"'
+		out = Ore.parse '"An `interpolated` string"'
 		assert_kind_of Ore::String_Expr, out.first
 		assert out.first.interpolated
 
-		out = Ore.parse "'Another |interpolated| string'"
+		out = Ore.parse "'Another `interpolated` string'"
 		assert_kind_of Ore::String_Expr, out.first
 		assert out.first.interpolated
 	end
@@ -851,12 +851,12 @@ class Parser_Test < Base_Test
 
 	def test_html_fence_expr_with_interpolation
 		out        = Ore.parse '```html
-		<h1>Welcome |name|</h1>
+		<h1>Welcome `name`</h1>
 		```'
 		html_fence = out.first
 
 		assert_instance_of Ore::Html_Fence_Expr, html_fence
-		assert html_fence.body.value.include?('<h1>Welcome |name|</h1>')
+		assert html_fence.body.value.include?('<h1>Welcome `name`</h1>')
 		assert html_fence.body.interpolated
 	end
 

@@ -25,7 +25,7 @@ Greet {
 	}
 
 	greeting {;
-		"Hello, |subject|!"
+		"Hello, `subject`!"
 	}
 }
 
@@ -102,12 +102,12 @@ Greet('Ore').greeting()
 nothing;            # Syntactic sugar for "nothing = nil"
 something = true
 
-# Strings can be single or double quoted, and interpolated with "|"
+# Strings can be single or double quoted, and interpolated with backticks
 LANG_NAME = "ore-lang"
 version   = '0.0.0'
 lines     = 4_815
-header    = "|LANG_NAME| v|version|"   # "ore-lang v0.0.0"
-footer    = 'Lines of code: |lines|'   # "Lines of code: 4815"
+header    = "`LANG_NAME` v`version`"   # "ore-lang v0.0.0"
+footer    = 'Lines of code: `lines`'   # "Lines of code: 4815"
 
 # Ranges
 inclusive_range   = 0..2
@@ -147,7 +147,7 @@ fizz_buzz { n;
 	elif n % 5 == 0
 		'Buzz'
 	else
-		'|n|'
+		'`n`'
 	end           # Control flows close with `end`
 }                 # Code blocks close with `}`
 ```
@@ -168,7 +168,7 @@ Repo {
 	}
 
 	to_s {;
-		"|user|/|name|"
+		"`user`/`name`"
 	}
 }
 
@@ -202,7 +202,7 @@ end
 # Access iteration index with "at"
 indexed = []
 for ['a', 'b', 'c']
-	indexed << "|at|: |it|"
+	indexed << "`at`: `it`"
 end
 # indexed = ["0: a", "1: b", "2: c"]
 
@@ -323,7 +323,7 @@ Web_App | Server {
 	}
 
 	get://hello/:name { name;
-		"<h1>Hello, |name|!</h1>"
+		"<h1>Hello, `name`!</h1>"
 	}
 
 	post://submit {;

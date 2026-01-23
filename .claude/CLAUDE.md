@@ -555,7 +555,7 @@ Post.create({title: "Hello", body: "World"})
 posts = Post.all()
 
 for posts
-    @puts "|it[:title]|: |it[:body]|"
+    @puts "`it[:title]`: `it[:body]`"
 end
 ```
 

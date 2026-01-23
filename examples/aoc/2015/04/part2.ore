@@ -6,7 +6,7 @@ Now find one that starts with six zeroes.
 input = 'iwrupvqb'
 lowest = nil
 while true
-	test = "|input||at|".to_md5_hash()
+	test = "`input``at`".to_md5_hash()
 	if test.start_with?('000000')
 		lowest = at
 		stop

@@ -131,7 +131,7 @@ class Regression_Test < Base_Test
 			}
 
 			to_s {;
-				"|kind|-box"
+				"`kind`-box"
 			}
 		}
 
