@@ -46,13 +46,13 @@ module Ore
 		shutdown        = false
 
 		Signal.trap 'INT' do
-			puts "\nShutting down..."
+			puts "░ Shutting down safely"
 			shutdown = true
 			Thread.main.raise Interrupt
 		end
 
 		Signal.trap 'TERM' do
-			puts "\nShutting down..."
+			puts "░ Shutting down safely"
 			shutdown = true
 			Thread.main.raise Interrupt
 		end
@@ -78,15 +78,14 @@ module Ore
 
 					unless listener
 						listener = Listen.to('.', only: /\.(ore|rb)$/) do |modified, added, removed|
-							puts "\nReloading..."
+							puts "▓▒░ Reloading because of changes to rb|ore files"
 							reload = true
 							current_servers.each(&:stop)
 						end
 						listener.start
-
-						puts "Server(s) running. Press Ctrl+C to stop."
-						puts "Watching for .ore and .rb file changes..."
 					end
+
+					puts "▓▒░ Press ctrl+c to shut down"
 
 					current_servers.each do |server|
 						server.server_thread&.join
