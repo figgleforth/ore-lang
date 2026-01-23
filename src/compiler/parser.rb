@@ -273,7 +273,7 @@ module Ore
 		end
 
 		def parse_type_decl
-			# bug, When parsing `Identifier {->}`. :Identifier_function
+			# bug, When parsing `Identifier {;}`. :Identifier_function
 			# todo, The | TYPE_COMPOSITION_OPERATOR is currently only working in #parse_type_decl. I can peek until end of line, if I see another | then it's a circumfix. However if there are more |s then maybe we can presume the expression type like this:
 			#
 			#   1 | = composition

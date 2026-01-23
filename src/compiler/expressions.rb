@@ -77,9 +77,9 @@ module Ore
 		end
 	end
 
-	# get:// {->}
-	# put://whatever/:id {id->}
-	# post://book/:id/publish {id->}
+	# get:// {;}
+	# put://whatever/:id {id;}
+	# post://book/:id/publish {id;}
 	class Route_Expr < Func_Expr
 		attr_accessor :http_method, :path, :expression, :param_names # The expression can be a function or an identifier
 	end

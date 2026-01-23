@@ -512,7 +512,7 @@ module Ore
 
 		def interp_each_loop collection, func_expr
 			collection.each do |it|
-				each_scope                 = Ore::Scope.new 'each{->}'
+				each_scope                 = Ore::Scope.new 'each{;}'
 				each_scope.enclosing_scope = runtime.stack.last
 				runtime.push_scope each_scope
 				each_scope.declare 'it', it
@@ -821,7 +821,7 @@ module Ore
 			else
 				if expr.arguments.count > 0
 					# todo: Proper error
-					raise "Given #{expr.arguments.count} arguments, but new{->} was not declared for #{type.name}"
+					raise "Given #{expr.arguments.count} arguments, but new{} was not declared for #{type.name}"
 				end
 			end
 
@@ -927,7 +927,7 @@ module Ore
 			call_scope.declare 'request', req
 			call_scope.declare 'response', res
 
-			# Bind URL parameters as function arguments. For example, get://:abc/:def { abc, def -> }
+			# Bind URL parameters as function arguments. For example, get://:abc/:def { abc, def; }
 			params.each do |param|
 				value = url_params[param.name.value] || url_params[param.name.value.to_sym]
 
@@ -1417,7 +1417,7 @@ module Ore
 				#   1) Create type in Ore
 				#   2) Create equivalent type in scopes.rb or similar
 				#   3) Make sure functions which use the @super expression in its body are named in to match the Ore::Type "proxy_#{func_name}"
-				# For example, `String { upcase { -> @super } }` maps to `Ore::String@super_upcase`
+				# For example, `String { upcase {; @super } }` maps to `Ore::String@super_upcase`
 				raise Ore::Invalid_Directive_Usage.new(expr, runtime)
 			end
 		end

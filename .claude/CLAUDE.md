@@ -142,11 +142,11 @@ Type-level (static) members are declared using the `..` scope operator:
 Person {
     ./count = 0       # Static variable shared across all instances
 
-    ./increment { ->  # Static method
+    ./increment {;  # Static method
         count += 1
     }
 
-    init { ->
+    init {;
         ./count += 1  # Access static from instance method
     }
 }
@@ -174,10 +174,10 @@ The language enforces naming conventions through the helper functions:
 
 ## Function Conventions
 
-Lowercase identifier, followed by a `{}` grouped block which contains `->` which separates the params and body.
+Lowercase identifier, followed by a `{}` grouped block which contains `;` which separates the params and body.
 
 ```ore
-<identifier> { <args> -> <body> }
+<identifier> { <args>; <body> }
 ```
 
 ## Class Conventions
@@ -197,7 +197,7 @@ The `@` operator allows unpacking instance members into sibling scopes for clean
 `@` behaes as a prefix operator here.
 
 ```ore
-add { @vec ->
+add { @vec;
     x + y  "# Access vec.x and vec.y directly
 }
 
@@ -220,7 +220,7 @@ x = island_member  # Access members directly
 
 @ -= island  # Remove island from sibling scope
 
-thingy { @island ->
+thingy { @island;
 	# use island.name here unpacked
 }
 ```
@@ -243,8 +243,8 @@ Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that 
 
 ```ore
 String {
-    upcase { -> @super }
-    downcase { -> @super }
+    upcase {; @super }
+    downcase {; @super }
 }
 ```
 
@@ -420,7 +420,7 @@ end
 The `return` keyword exits a function and returns a value. It properly propagates even when used inside loops:
 
 ```ore
-find { func ->
+find { func;
     for values
         if func(it)
             return it  # Exits the function, not just the loop
@@ -429,7 +429,7 @@ find { func ->
     nil
 }
 
-[1, 2, 3].find({ x ->
+[1, 2, 3].find({ x;
     x > 1
 })  # Returns 2
 ```
@@ -522,7 +522,7 @@ User.create({name: "Bob", email: "bob@example.com"})
 
 `Query records
 users = User.all()         # => Array of Dictionary instances
-user = User.find(1)        # => Dictionary with {id: 1, name: "Alice", ->}
+user = User.find(1)        # => Dictionary with {id: 1, name: "Alice", ... }
 
 `Delete records
 User.delete(1)
@@ -588,7 +588,7 @@ Ore has built-in web server support:
 - `response.body = content` - Set response body
 
 ```ore
-post://login { ->
+post://login {;
     if authenticate(request.body.username, request.body.password)
         response.redirect("/dashboard")
     else

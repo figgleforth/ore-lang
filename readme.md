@@ -20,11 +20,11 @@ Example code from [examples/hello.ore](./examples/hello.ore):
 Greet {
 	subject;
 
-	new { subject ->
+	new { subject;
 		.subject = subject
 	}
 
-	greeting { ->
+	greeting {;
 		"Hello, |subject|!"
 	}
 }
@@ -71,7 +71,7 @@ Greet('Ore').greeting()
 	- Stride support with `for x by 2` syntax
 - Unpacking an instance's declarations with `@` operator
 	- Makes declarations accessible without `instance.` prefix
-	- Auto-unpack function parameters in function body `funk { @with -> }`
+	- Auto-unpack function parameters in function body `funk { @with; }`
 	- Manually unpack `@ += instance` and undo `@ -= instance`
 - Basic web server with routing
 	- Route definitions use `method://path` syntax (e.g., `get://`, `post://users/:id`)
@@ -131,15 +131,15 @@ dict = { v=version, l=lines }   # {v: "0.0.0", l: 4815}
 #### Functions
 
 ```
-# Syntax: <function_name> { <params, etc> -> <body> }, where "->" is the delimiter between params and body.
+# Syntax: <function_name> { <params, etc>; <body> }, where ";" is the delimiter between params and body.
 
-noop_function {->}
+noop_function {;}
 
-best_show { ->
+best_show {;
 	"Lost"  # Last expression is return value
 }
 
-fizz_buzz { n ->
+fizz_buzz { n;
 	if n % 3 == 0 and n % 5 == 0
 		'FizzBuzz'
 	elif n % 3 == 0
@@ -162,12 +162,12 @@ Repo {
 	name;
 
 	# "new" is reserved for constructors
-	new { user, name ->
+	new { user, name
 		.user = user
 		.name = name
 	}
 
-	to_s { ->
+	to_s {;
 		"|user|/|name|"
 	}
 }
@@ -227,14 +227,14 @@ Vector {
 	x;
 	y;
 
-	new { x, y ->
+	new { x, y;
 		.x = x
 		.y = y
 	}
 }
 
 # Auto-unpack in function parameters with @
-add { @vec ->
+add { @vec;
 	x + y  # Access vec.x and vec.y directly without vec. prefix
 }
 
@@ -242,7 +242,7 @@ v = Vector(3, 4)
 add(v)  # 7
 
 # Manual sibling scope control
-multiply { factor ->
+multiply { factor;
 	v1 = Vector(5, 10)
 	@ += v1  # Add v1's members to sibling scope
 
@@ -318,21 +318,21 @@ Post.delete(2)
 # Create servers by composing with built-in Server type
 Web_App | Server {
 	# Define routes using HTTP method and path
-	get:// { ->
+	get:// {;
 		"<h1>Welcome to Ore!</h1>"
 	}
 
-	get://hello/:name { name ->
+	get://hello/:name { name;
 		"<h1>Hello, |name|!</h1>"
 	}
 
-	post://submit { ->
+	post://submit {;
 		"Form submitted"
 	}
 }
 
 API_Server | Server {
-	get://api/users { ->
+	get://api/users {;
 		"[{\"id\": 1, \"name\": \"Alice\"}]"
 	}
 }
@@ -355,12 +355,12 @@ Layout | Dom {
 	title;
 	body_content;
 
-	new { title = 'My page', body_content = 'Hello!' ->
+	new { title = 'My page', body_content = 'Hello!';
 		.title = title
 		.body_content = body_content
 	}
 
-	render { ->
+	render {;
 		# Use built-in Html, Head, Title, and Body types
 		Html([
 			Head(Title(title)),
@@ -376,7 +376,7 @@ Using strings with HTML:
 @use 'ore/html.ore'
 
 Layout | Dom {
-	render { ->
+	render {;
 		"<html><head><title>My page</title></head><body>Hello!</body></html>"
 	}
 }
@@ -411,7 +411,7 @@ My_Div | Dom {
 # => <p class='my_class' id='my_id' style='background-color:black;color:white;'></p>
 ```
 
-Note: Rendering HTML only works when `render{->}` is called by a Server instance. See [html.ore](ore/html.ore) for predefined `Dom` elements. See [web1.ore](examples/web1.ore) for Server and HTML usage.
+Note: Rendering HTML only works when `render{;}` is called by a Server instance. See [html.ore](ore/html.ore) for predefined `Dom` elements. See [web1.ore](examples/web1.ore) for Server and HTML usage.
 
 ### Project Structure
 
