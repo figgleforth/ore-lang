@@ -545,13 +545,13 @@ module Ore
 				# elsif curr? SCOPE_OPERATORS
 				# 	parse_operator_expr
 
-			elsif curr? [',', '->']
+			elsif curr? ','
 				# todo: Don't just discard the comma, make tuples implied when commas are found in #complete_expression
 				eat and nil
 
 			elsif curr? ';'
 				# This is reserved for function declarations
-				raise "; is reserverd as function header and body delimiter"
+				raise Ore::Reserved_Function_Delimiter.new curr_lexeme
 
 			elsif curr? :delimiter
 				reduce_newlines and nil

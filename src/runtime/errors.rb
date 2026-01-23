@@ -125,4 +125,7 @@ module Ore
 
 	class Type_Checking_Failed < Error
 	end
+
+	class Reserved_Function_Delimiter < Error
+	end
 end

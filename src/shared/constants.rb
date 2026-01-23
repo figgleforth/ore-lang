@@ -1,7 +1,7 @@
 module Ore
 	RUNTIME_SCOPE_OPERATOR     = '@'
 	NIL_INIT_POSTFIX           = ','
-	FUNCTION_DELIMITER         = '->'
+	FUNCTION_DELIMITER         = ';'
 	IMPORT_FILE_DIRECTIVE      = 'use'
 	FOR_VERBS                  = %w(each map select reject count)
 	HTML_ATTRS                 = %w(id class href)
@@ -34,7 +34,7 @@ module Ore
 	ANY_IDENTIFIER             = %i(identifier Identifier IDENTIFIER)
 	GSCOPE                     = :global
 	STARTING_PRECEDENCE        = 0
-	DELIMITERS                 = %W(, ; -> { } ( ) [ ] \n \r).freeze
+	DELIMITERS                 = %W(, ; { } ( ) [ ] \n \r).freeze
 	NEWLINES                   = %W(\r\n \n).freeze
 	WHITESPACES                = %W(\t \s).freeze
 	NUMERIC_REGEX              = /\A\d+\z/
@@ -44,7 +44,7 @@ module Ore
 
 	# It's been a while, but I believe this RESERVED list must be maintained. The other declarations above are helpers for comparisons while this contains every reserved symbols and identifiers.
 	RESERVED = %w(
-		[ { ( , _ . .. -> ) } ]
+		[ { ( , _ . .. ) } ]
 		: ;
 		+ - * ** / % ~
 		= ||= &&= **= <<= >>= += -= *= |= /= %= &= ^=

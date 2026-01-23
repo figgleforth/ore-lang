@@ -288,28 +288,28 @@ class Parser_Test < Base_Test
 	end
 
 	def test_functions
-		out = Ore.parse '{->}'
+		out = Ore.parse '{;}'
 		assert_kind_of Ore::Func_Expr, out.first
 		assert_empty out.first.expressions
 		refute out.first.name
 
-		out = Ore.parse '{ ->
+		out = Ore.parse '{;
 		}'
 		assert_empty out.first.expressions
 		refute out.first.name
 
-		out = Ore.parse 'named_function {->}'
+		out = Ore.parse 'named_function {;}'
 		assert_equal 'named_function', out.first.name.value
 	end
 
 	def test_function_params
-		out = Ore.parse '{ with_param -> }'
+		out = Ore.parse '{ with_param; }'
 		assert_equal 1, out.first.expressions.count
 		out.first.expressions.each do
 			assert_kind_of Ore::Param_Expr, it
 		end
 
-		out = Ore.parse 'named { with_param -> }'
+		out = Ore.parse 'named { with_param; }'
 		assert_equal 'named', out.first.name.value
 		assert_equal 1, out.first.expressions.count
 		out.first.expressions.each do
@@ -319,25 +319,25 @@ class Parser_Test < Base_Test
 		refute out.first.expressions.first.default
 		refute out.first.expressions.first.type
 
-		out = Ore.parse '{ labeled param -> }'
+		out = Ore.parse '{ labeled param; }'
 		assert_kind_of Ore::Param_Expr, out.first.expressions.first
 		assert_equal 'labeled', out.first.expressions.first.label.value
 		assert out.first.expressions.first.label
 		refute out.first.expressions.first.default
 		refute out.first.expressions.first.type
 
-		out = Ore.parse '{ default_values = 4 -> }'
+		out = Ore.parse '{ default_values = 4; }'
 		assert_kind_of Ore::Param_Expr, out.first.expressions.first
 		assert out.first.expressions.first.default
 		assert_kind_of Ore::Number_Expr, out.first.expressions.first.default
 
-		out = Ore.parse 'named { and_labeled with_default = 8 -> }'
+		out = Ore.parse 'named { and_labeled with_default = 8; }'
 		assert_kind_of Ore::Param_Expr, out.first.expressions.first
 		assert_equal 'and_labeled', out.first.expressions.first.label.value
 		assert_equal 'with_default', out.first.expressions.first.name.value
 		assert_equal 'named', out.first.name.value
 
-		out = Ore.parse 'named { with, multiple, even labeled = 4, params = 5 -> }'
+		out = Ore.parse 'named { with, multiple, even labeled = 4, params = 5; }'
 		assert_equal 4, out.first.expressions.count
 		assert_equal out.first.expressions.map(&:label), [nil, nil, Ore::Lexeme.new(:identifier, 'even'), nil]
 		assert_equal out.first.expressions.map(&:name), %w(with multiple labeled params).map { Ore::Lexeme.new(:identifier, _1) }
@@ -346,14 +346,14 @@ class Parser_Test < Base_Test
 
 	def test_function_bodies
 		out = Ore.parse '
-		square { input ->
+		square { input;
 			input * input
 		}'
 		refute_empty out.first.expressions
 		assert_kind_of Ore::Infix_Expr, out.first.expressions[1]
 
 		out = Ore.parse '
-		nothing { input ->
+		nothing { input;
 			return input
 		}'
 		assert_kind_of Ore::Prefix_Expr, out.first.expressions[1]
@@ -361,25 +361,25 @@ class Parser_Test < Base_Test
 	end
 
 	def test_function_signatures
-		out = Ore.parse 'nothing { input ->
+		out = Ore.parse 'nothing { input;
 			return input
 		}'
-		assert_equal 'nothing{input->}', out.first.signature
+		assert_equal 'nothing{input;}', out.first.signature
 	end
 
 	def test_complex_function
 		out = Ore.parse '
-		curr? { sequence ->
+		curr? { sequence;
 			if not remainder or not lexemes?
 				return false
 			end
 
 			slice = remainder.slice(0, sequence.count)
-			slice.{ ->
+			slice.{;
 				expected = sequence[at]
 
 				if expected === Array
-					expected.any? { ->
+					expected.any? {;
 						it == it2
 					}
 				else
@@ -424,16 +424,16 @@ class Parser_Test < Base_Test
 	end
 
 	def test_function_calls
-		out = Ore.parse '{->}()'
+		out = Ore.parse '{;}()'
 		assert_kind_of Ore::Call_Expr, out.first
 		assert_kind_of Ore::Func_Expr, out.first.receiver
 		assert_empty out.first.arguments
 
-		out = Ore.parse '{->}(true)'
+		out = Ore.parse '{;}(true)'
 		refute_empty out.first.arguments
 		assert_kind_of Ore::Identifier_Expr, out.first.arguments.first
 
-		out = Ore.parse '{->}(1, 2, 3)'
+		out = Ore.parse '{;}(1, 2, 3)'
 		out.first.arguments.each do
 			assert_kind_of Ore::Number_Expr, it
 		end
@@ -478,7 +478,7 @@ class Parser_Test < Base_Test
 		assert_kind_of Ore::Conditional_Expr, out.first
 		assert_kind_of Ore::Call_Expr, out.first.when_true.first
 
-		out = Ore.parse 'wrap { number, limit ->
+		out = Ore.parse 'wrap { number, limit;
 			if number > limit
 				number = 0
 			end
@@ -688,8 +688,14 @@ class Parser_Test < Base_Test
 	end
 
 	def test_infinite_loop_bug
-		out = Ore.parse 'Identifier {->}'
+		# Empty type body should parse fine
+		out = Ore.parse 'Identifier {}'
 		assert_kind_of Ore::Type_Expr, out.first
+
+		# Bare semicolon in type body should raise reserved error
+		assert_raises Ore::Reserved_Function_Delimiter do
+			Ore.parse 'Identifier {;}'
+		end
 
 		# out = Ore.parse 'x, , y, , z,'
 		# assert_kind_of Ore::Postfix_Expr, out.first
@@ -703,7 +709,7 @@ class Parser_Test < Base_Test
 	end
 
 	def test_unpack_prefix
-		out = Ore.parse 'funk { @with -> }'
+		out = Ore.parse 'funk { @with; }'
 		assert_kind_of Ore::Param_Expr, out.first.expressions.first
 		assert out.first.expressions.first.unpack
 	end
@@ -729,13 +735,13 @@ class Parser_Test < Base_Test
 
 	def test_all_http_methods
 		Ore::HTTP_VERBS.each do |verb|
-			assert_instance_of Ore::Route_Expr, Ore.parse("#{verb}://path {->}").first
+			assert_instance_of Ore::Route_Expr, Ore.parse("#{verb}://path {;}").first
 		end
 	end
 
 	def test_route_declaration_with_http_method_directives
 		refute_raises Ore::Invalid_Http_Directive_Handler do
-			out = Ore.parse 'get://something {->}'
+			out = Ore.parse 'get://something {;}'
 			assert_equal 1, out.count
 			assert_instance_of Ore::Route_Expr, out.first
 			assert_equal 'get', out.first.http_method.value
@@ -758,7 +764,7 @@ class Parser_Test < Base_Test
 		# 	Ore.parse_code '#post "whatever/:id" 1234'
 		# end
 
-		out = Ore.parse '@pretend_method "endpoint" {->}'
+		out = Ore.parse '@pretend_method "endpoint" {;}'
 		assert_equal 2, out.count
 		refute_instance_of Ore::Route_Expr, out.first
 		assert_instance_of Ore::Directive_Expr, out[0]

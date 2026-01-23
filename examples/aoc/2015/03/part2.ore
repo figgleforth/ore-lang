@@ -18,7 +18,7 @@ Vec2 {
 	x,
 	y,
 
-	new {x, y ->
+	new {x, y;
 		.x = x
 		.y = y
 	}

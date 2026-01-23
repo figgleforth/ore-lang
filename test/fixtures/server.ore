@@ -1,5 +1,5 @@
 Web_App | Server {
-    get://users/:user_id/posts/:post_id { user_id, post_id ->
+    get://users/:user_id/posts/:post_id { user_id, post_id;
         "User |user_id| Post |post_id|"
     }
 }

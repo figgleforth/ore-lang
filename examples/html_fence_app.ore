@@ -2,7 +2,7 @@
 @use 'ore/server.ore'
 
 App | Server {
-	get:// home {->
+	get:// home {;
 		name = 'Cooper'
 		```html
 		<h1>Welcome to |name|'s webpage</h1>

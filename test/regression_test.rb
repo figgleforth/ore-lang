@@ -85,7 +85,7 @@ class Regression_Test < Base_Test
 	def test_instance_does_not_have_new_function_regression
 		out = Ore.interp '
 		Atom {
-			new {->}
+			new {;}
 		}
 		a = Atom()
 		b = Atom.new()
@@ -98,7 +98,7 @@ class Regression_Test < Base_Test
 		out = Ore.interp 'Number {
 			numerator = 8
 
-			new { num ->
+			new { num;
 				.numerator = num
 			}
 		}
@@ -112,7 +112,7 @@ class Regression_Test < Base_Test
 		Number {
 			numerator = -100
 
-			new { num ->
+			new { num;
 				.numerator = num
 			}
 		}
@@ -126,11 +126,11 @@ class Regression_Test < Base_Test
 		Box {
 			kind = "NONE"
 
-			new { new_kind ->
+			new { new_kind;
 				.kind = new_kind
 			}
 
-			to_s { ->
+			to_s {;
 				"|kind|-box"
 			}
 		}
@@ -148,14 +148,14 @@ class Regression_Test < Base_Test
 
 	def test_identifier_lookup_regression
 		out = Ore.interp "x = 123
-		funk { ->
+		funk {;
 			../x + 2
 		}
 		funk()"
 		assert_equal 125, out
 
 		out = Ore.interp "y = 0
-		add { amount_to_add = 1 ->
+		add { amount_to_add = 1;
 			../y + amount_to_add
 		}
 		(a = add(4))
@@ -164,7 +164,7 @@ class Regression_Test < Base_Test
 		assert_equal [4, 8], out.values
 
 		out = Ore.interp "y = 0
-		add { amount_to_add = 1 ->
+		add { amount_to_add = 1;
 			y += amount_to_add
 		}
 		a = add(4)
@@ -178,7 +178,7 @@ class Regression_Test < Base_Test
 				id,
 				name = 'Thingy'
 
-				new { new_name = '', id = 123 ->
+				new { new_name = '', id = 123;
 					.name = new_name
 					.id = id
 				}
@@ -197,7 +197,7 @@ class Regression_Test < Base_Test
 				id,
 				name = 'Thingy',
 
-				new { new_name, id ->
+				new { new_name, id;
 					.name = new_name
 					.id = id
 				}
@@ -210,7 +210,7 @@ class Regression_Test < Base_Test
 
 		assert_raises Ore::Missing_Argument do
 			Ore.interp "
-	        funk { it ->
+	        funk { it;
 				it == true
 			}
 			funk() # This will raise
@@ -219,7 +219,7 @@ class Regression_Test < Base_Test
 
 		refute_raises Ore::Undeclared_Identifier do
 			Ore.interp "
-			funk { it ->
+			funk { it;
 				it == true
 			}
 			funk(true), funk(false)
@@ -228,7 +228,7 @@ class Regression_Test < Base_Test
 
 		refute_raises Ore::Undeclared_Identifier do
 			Ore.interp "
-			funk { it = \"true\" ->
+			funk { it = \"true\";
 				it == true
 			}
 			funk(true), funk()
@@ -237,7 +237,7 @@ class Regression_Test < Base_Test
 
 		refute_raises Ore::Undeclared_Identifier do
 			Ore.interp "
-			funk { it = \"false\" ->
+			funk { it = \"false\";
 				it == true
 			}
 			funk(true), funk()
@@ -246,7 +246,7 @@ class Regression_Test < Base_Test
 
 		refute_raises Ore::Undeclared_Identifier do
 			Ore.interp "
-			funk { it = true ->
+			funk { it = true;
 				it == true
 			}
 			funk(true), funk()
@@ -255,7 +255,7 @@ class Regression_Test < Base_Test
 
 		refute_raises Ore::Undeclared_Identifier do
 			Ore.interp "
-			funk { funkit = false ->
+			funk { funkit = false;
 				funkit == true
 			}
 			funk(true), funk()
@@ -264,7 +264,7 @@ class Regression_Test < Base_Test
 
 		refute_raises Ore::Undeclared_Identifier do
 			Ore.interp "
-			funk { it = nil ->
+			funk { it = nil;
 				it == true
 			}
 			funk(true), funk()
@@ -288,11 +288,11 @@ class Regression_Test < Base_Test
 		    Outer {
 		    	name,
 
-		    	new { name ->
+		    	new { name;
 		    		.name = name
 		    	}
 
-		    	make_inner { ->
+		    	make_inner {;
 		    		Inner("inner_value")
 		    	}
 		    }
@@ -300,11 +300,11 @@ class Regression_Test < Base_Test
 		    Inner {
 		    	name,
 
-		    	new { name ->
+		    	new { name;
 		    		.name = name
 		    	}
 
-		    	get_name { ->
+		    	get_name {;
 		    		name
 		    	}
 		    }
@@ -321,7 +321,7 @@ class Regression_Test < Base_Test
 		# note: Composing Array with itself allows extending or overriding behavior of Array. Notice how `values` is accessible despite being declared on the original Array type.
 		without_prefix = <<~CODE
 		    Array | Array {
-		        each { func ->
+		        each { func;
 		        	for values
 		        		func(it)
 		        	end
@@ -331,7 +331,7 @@ class Regression_Test < Base_Test
 
 		with_prefix = <<~CODE
 		    Array | Array {
-		        each { func ->
+		        each { func;
 		        	for .values
 		        		func(it)
 		        	end
@@ -343,7 +343,7 @@ class Regression_Test < Base_Test
 		    values = Array([1,2,3])
 		    #{without_prefix}
 		    values2 = []
-		    values.each({it ->
+		    values.each({it;
 		    	values2.push(it)
 		    })
 		    values2
@@ -354,7 +354,7 @@ class Regression_Test < Base_Test
 		    values = Array([1,2,3])
 		    #{with_prefix}
 		    values2 = []
-		    values.each({it ->
+		    values.each({it;
 		    	values2.push(it)
 		    })
 		    values2
@@ -367,7 +367,7 @@ class Regression_Test < Base_Test
 			Ore.interp <<~ORE
 			    Thing {
 			    	./abc,
-			    	./def {->}
+			    	./def {;}
 			    }
 
 			    	Thing.abc

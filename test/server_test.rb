@@ -9,7 +9,7 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 3000 ->
+		    	new { port = 3000;
 		    		.port = port
 		    	}
 		    }
@@ -26,13 +26,13 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 3001 ->
+		    	new { port = 3001;
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get:// { ->
+		    	get:// {;
 		    		"Hello World"
 		    	}
 		    }
@@ -49,17 +49,17 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 3002 ->
+		    	new { port = 3002;
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get://hello { ->
+		    	get://hello {;
 		    		"Hi there!"
 		    	}
 
-		    	get://users/:id { id ->
+		    	get://users/:id { id;
 		    		"User: |id|"
 		    	}
 		    }
@@ -80,7 +80,7 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 8888 ->
+		    	new { port = 8888;
 		    		.port = port
 		    	}
 		    }
@@ -101,17 +101,17 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 3003 ->
+		    	new { port = 3003;
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get:// { ->
+		    	get:// {;
 		    		"Home"
 		    	}
 
-		    	post://submit { ->
+		    	post://submit {;
 		    		"Submitted"
 		    	}
 		    }
@@ -132,17 +132,17 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 3004 ->
+		    	new { port = 3004;
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get://users/:id { id ->
+		    	get://users/:id { id;
 		    		"User |id|"
 		    	}
 
-		    	get://posts/:post_id/comments/:comment_id { post_id, comment_id ->
+		    	get://posts/:post_id/comments/:comment_id { post_id, comment_id;
 		    		"Post |post_id| Comment |comment_id|"
 		    	}
 		    }
@@ -175,13 +175,13 @@ class Server_Test < Base_Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = 3005 ->
+		    	new { port = 3005;
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get://users/:user_id/posts/:post_id { user_id, post_id ->
+		    	get://users/:user_id/posts/:post_id { user_id, post_id;
 		    		"User |user_id| Post |post_id|"
 		    	}
 		    }

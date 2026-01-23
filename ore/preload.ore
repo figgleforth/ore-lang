@@ -7,7 +7,7 @@
 @use 'ore/string.ore'
 
 Iterable { # todo: This is unused, but here to remind me to think about how to make composing with Iterable behave like Protocols in Swift.
-	next {->}
+	next {;}
 }
 
 Nil {}
@@ -21,7 +21,7 @@ Tuple {
 Bool {
 	truthiness,
 
-	new { value = true ->
+	new { value = true;
 		.truthiness = value != false
 	}
 }

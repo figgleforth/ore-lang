@@ -6,28 +6,28 @@ String {
 	length, # Total number of characters
 	ord, # Integer ordinal of the first character
 
-	new { value = '' ->
+	new { value = '';
 		.value = value
 	}
 
-	downcase { -> @super }
-	upcase { -> @super }
-	split { delimiter = nil -> @super } # todo: Without the default nil value, .split() fails
-    slice { substr -> @super }
-    trim { -> @super }
-	trim_left { -> @super }
-	trim_right { -> @super }
-    chars { -> @super }
-    index { substr -> @super }
-    to_i { -> @super }
-    to_f { -> @super }
-	empty? { -> @super }
-	include? { substr -> @super }
-	reverse { -> @super }
-	replace { new -> @super }
-	start_with? { prefix -> @super }
-	end_with? { suffix -> @super }
-	gsub { pattern, replacement -> @super }
+	downcase {; @super }
+	upcase {; @super }
+	split { delimiter = nil; @super } # todo: Without the default nil value, .split() fails
+    slice { substr; @super }
+    trim {; @super }
+	trim_left {; @super }
+	trim_right {; @super }
+    chars {; @super }
+    index { substr; @super }
+    to_i {; @super }
+    to_f {; @super }
+	empty? {; @super }
+	include? { substr; @super }
+	reverse {; @super }
+	replace { new; @super }
+	start_with? { prefix; @super }
+	end_with? { suffix; @super }
+	gsub { pattern, replacement; @super }
 
-	to_md5_hash { -> @super }
+	to_md5_hash {; @super }
 }

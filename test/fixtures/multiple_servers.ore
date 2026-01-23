@@ -1,9 +1,9 @@
 Server_A | Server {
-  get://a { -> "From Server A" }
+  get://a {; "From Server A" }
 }
 
 Server_B | Server {
-  get://b { -> "From Server B" }
+  get://b {; "From Server B" }
 }
 
 a = Server_A(8080)

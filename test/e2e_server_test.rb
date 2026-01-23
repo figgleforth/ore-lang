@@ -21,17 +21,17 @@ class E2E_Server_Test < Minitest::Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = #{@port} ->
+		    	new { port = #{@port};
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get:// { ->
+		    	get:// {;
 		    		"Hello from Ore!"
 		    	}
 
-		    	get://hello/:name { name ->
+		    	get://hello/:name { name;
 		    		"<h1>Hello, |name|!</h1>"
 		    	}
 		    }
@@ -70,13 +70,13 @@ class E2E_Server_Test < Minitest::Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = #{@port} ->
+		    	new { port = #{@port};
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	get://search { ->
+		    	get://search {;
 		    		"Query: |request.query|"
 		    	}
 		    }
@@ -103,13 +103,13 @@ class E2E_Server_Test < Minitest::Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port = #{@port} ->
+		    	new { port = #{@port};
 		    		.port = port
 		    	}
 		    }
 
 		    Web_App | Server {
-		    	post://submit { ->
+		    	post://submit {;
 		    		"Form submitted"
 		    	}
 		    }
@@ -139,19 +139,19 @@ class E2E_Server_Test < Minitest::Test
 		code = <<~ORE
 		    Server {
 		    	port,
-		    	new { port ->
+		    	new { port;
 		    		.port = port
 		    	}
 		    }
 
 		    Server_A | Server {
-		    	get://a { ->
+		    	get://a {;
 		    		"Response from Server A"
 		    	}
 		    }
 
 		    Server_B | Server {
-		    	get://b { ->
+		    	get://b {;
 		    		"Response from Server B"
 		    	}
 		    }

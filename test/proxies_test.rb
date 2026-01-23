@@ -52,7 +52,7 @@ class ProxiesTest < Base_Test
 		out = Ore.interp <<~ORE
 		    x = [1, 2, 3]
 		    y = []
-		    x.each({ item ->
+		    x.each({ item;
 		        y << item * 2
 		    })
 		    y
@@ -83,9 +83,9 @@ class ProxiesTest < Base_Test
 
 		assert_equal "1,2,3", Ore.interp("[1, 2, 3].join(',')")
 
-		assert_equal [2, 4, 6], Ore.interp("[1, 2, 3].map({ x, i -> x * 2 })").values
-		assert_equal [2, 4], Ore.interp("[1, 2, 3, 4].filter({ x -> x % 2 == 0 })").values
-		assert_equal 10, Ore.interp("[1, 2, 3, 4].reduce(0, { acc, x -> acc + x })")
+		assert_equal [2, 4, 6], Ore.interp("[1, 2, 3].map({ x, i; x * 2 })").values
+		assert_equal [2, 4], Ore.interp("[1, 2, 3, 4].filter({ x; x % 2 == 0 })").values
+		assert_equal 10, Ore.interp("[1, 2, 3, 4].reduce(0, { acc, x; acc + x })")
 
 		assert_equal [1, 2, 3, 4, 5], Ore.interp("[1, 2, 3].concat([4, 5])")
 		assert_equal [1, 2, 3, 4], Ore.interp("[[1, 2], [3, 4]].flatten()").values
@@ -98,14 +98,14 @@ class ProxiesTest < Base_Test
 		assert Ore.interp("[].empty?()")
 		refute Ore.interp("[1].empty?()")
 
-		assert_equal 2, Ore.interp("[1, 2, 3].find({ x -> x > 1 })")
-		assert_nil Ore.interp("[1, 2, 3].find({ x -> x > 5 })")
+		assert_equal 2, Ore.interp("[1, 2, 3].find({ x; x > 1 })")
+		assert_nil Ore.interp("[1, 2, 3].find({ x; x > 5 })")
 
-		assert Ore.interp("[1, 2, 3].any?({ x -> x > 2 })")
-		refute Ore.interp("[1, 2, 3].any?({ x -> x > 5 })")
+		assert Ore.interp("[1, 2, 3].any?({ x; x > 2 })")
+		refute Ore.interp("[1, 2, 3].any?({ x; x > 5 })")
 
-		assert Ore.interp("[1, 2, 3].all?({ x -> x > 0 })")
-		refute Ore.interp("[1, 2, 3].all?({ x -> x > 2 })")
+		assert Ore.interp("[1, 2, 3].all?({ x; x > 0 })")
+		refute Ore.interp("[1, 2, 3].all?({ x; x > 2 })")
 	end
 
 	def test_dictionary_proxies

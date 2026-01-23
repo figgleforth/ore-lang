@@ -1,10 +1,10 @@
 Record {
 	table_name,
-	infer_table_name_from_class! { -> @super }
+	infer_table_name_from_class! {; @super }
 
 	./database,
-	./all { -> @super }
-	./find { id -> @super }
-	./create { dict -> @super }
-	./delete { id -> @super }
+	./all {; @super }
+	./find { id; @super }
+	./create { dict; @super }
+	./delete { id; @super }
 }

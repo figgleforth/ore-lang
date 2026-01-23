@@ -12,19 +12,19 @@ A present with dimensions 1x1x10 requires 1+1+1+1 = 4 feet of ribbon to wrap the
 How many total feet of ribbon should they order?
 ```
 
-smallest_perimeter { sides ->
+smallest_perimeter { sides;
 	sorted = sides.sort()
 	sorted.0 + sorted.0 + sorted.1 + sorted.1
 }
 # smallest_perimeter([2,3,4]) == 10
 
-perfect_bow { sides ->
+perfect_bow { sides;
 	sides.0 * sides.1 * sides.2
 }
 
 # Input is a string that looks like "15x2x9". Split the string by x to get an array of the three numbers, then call #to_i on all numbers
-input_to_array_of_sides { input ->
-	input.split('x').map({ it, at ->
+input_to_array_of_sides { input;
+	input.split('x').map({ it, at;
 		it.to_i()
 	})
 }

@@ -1,6 +1,6 @@
 MODULE_NAME = "Test_Module"
 MODULE_VALUE = 42
 
-module_func { x ->
+module_func { x;
 	x * 2
 }

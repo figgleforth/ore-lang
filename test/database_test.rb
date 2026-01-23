@@ -34,7 +34,7 @@ class Database_Test < Base_Test
 		assert_nil out.values.first.get 'connection'
 		assert_nil out.values.last.get 'connection'
 
-		# These are set in Sqlite.new{->}
+		# These are set in Sqlite.new{;}
 		refute_nil out.values.last.get 'adapter'
 		refute_nil out.values.last.get 'url'
 	end

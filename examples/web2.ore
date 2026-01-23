@@ -4,7 +4,7 @@
 Layout | Html {
 	css_filter = 'invert()'
 
-	render { ->
+	render {;
 		[Head(Title("Test App")), Body(children)]
 	}
 }
@@ -12,7 +12,7 @@ Layout | Html {
 Header | Dom {
 	css_color = 'green'
 
-	render { ->
+	render {;
 		[H3("|children| Page"), A("/", "home"), Br(), A("/about", "about"), Br()]
 	}
 }
@@ -20,11 +20,11 @@ Header | Dom {
 App_One {
 	| Server
 
-	get:// { ->
+	get:// {;
 		Layout([Header("Home"), Span("This is the home page")])
 	}
 
-	get://about { ->
+	get://about {;
 		Layout([Header("About"), Span("This is the about page")])
 	}
 }

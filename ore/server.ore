@@ -12,13 +12,13 @@ Response {
 	headers,
 	body,
 
-	redirect { location -> @super }
+	redirect { location; @super }
 }
 
 Server {
 	port,
 
-	new { port = 80 ->
+	new { port = 80;
 		.port = port
 	}
 }

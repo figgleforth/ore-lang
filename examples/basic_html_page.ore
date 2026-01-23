@@ -18,12 +18,12 @@ Layout | Html {
 	css_font_family = 'monospace'
 	css_font_size = '1.2em'
 
-	new { title, body_content ->
+	new { title, body_content;
 		.title = title
 		.body_content = body_content
 	}
 
-	render { ->
+	render {;
 		[
 			Head(Title(title)),
 			Page_Body(body_content)
@@ -32,7 +32,7 @@ Layout | Html {
 }
 
 Hero | Section {
-	render { ->
+	render {;
 		[
 			H1("Ore"),
 			P("Programming Language For Web Development")
@@ -56,12 +56,12 @@ Feature_Section | Dom {
 	heading,
 	items,
 
-	new { heading, items ->
+	new { heading, items;
 		.heading = heading
 		.items = items
 	}
 
-	render { ->
+	render {;
 		Div([
 			H2(heading),
 			Ul(items)
@@ -73,11 +73,11 @@ Feature_Section | Dom {
 Feature_Item | Dom {
 	text,
 
-	new { text ->
+	new { text;
 		.text = text
 	}
 
-	render { ->
+	render {;
 		Li(text)
 	}
 }
@@ -86,11 +86,11 @@ Feature_Item | Dom {
 Page_Content | Div {
 	snippet,
 
-	new { snippet ->
+	new { snippet;
 		.snippet = snippet
 	}
 
-	render { ->
+	render {;
 		naming = Feature_Section(
 			"Naming conventions replace keywords",
 			[
@@ -159,11 +159,11 @@ Page_Content | Div {
 readme_snippet = "Hello {
 	subject,
 
-	new { subject ->
+	new { subject;
 		.subject = subject
 	}
 
-	output { ->
+	output {;
 		'Hi, \|subject\|'
 	}
 }
@@ -173,7 +173,7 @@ Hello('World').output() # Hi, World!"
 
 ```The app serving this HTML```
 App | Server {
-	get:// { ->
+	get:// {;
 		Layout("Ore - Programming Language", Page_Content(readme_snippet))
 	}
 }

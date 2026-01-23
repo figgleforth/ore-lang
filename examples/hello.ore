@@ -1,11 +1,11 @@
 Greet {
 	subject,
 
-	new { subject ->
+	new { subject;
 		.subject = subject
 	}
 
-	greeting { ->
+	greeting {;
 		"Hello, |subject|!"
 	}
 }

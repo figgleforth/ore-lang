@@ -14,7 +14,7 @@ My_Body | Body {
 }
 
 App | Server {
-	get:// { ->
+	get:// {;
 		Html(
 			[
 				Head(Title("My page!")),
@@ -27,7 +27,7 @@ App | Server {
 		)
 	}
 
-	get://different_page { ->
+	get://different_page {;
 		Html(
 			[
 				Head(Title("My page!")),

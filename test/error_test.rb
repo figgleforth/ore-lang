@@ -60,7 +60,7 @@ class Error_Test < Base_Test
 	def test_missing_argument
 		# todo: Doesn't display code and location
 		assert_raises Ore::Missing_Argument do
-			Ore.interp 'add = { a, b -> a + b }, add(5)'
+			Ore.interp 'add = { a, b; a + b }, add(5)'
 		end
 	end
 

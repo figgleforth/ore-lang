@@ -3,11 +3,11 @@ Dom {
 	html_element = 'div'
 	children,
 
-	new { children = [] ->
+	new { children = [];
 		.children = children
 	}
 
-	render { -> children }
+	render {; children }
 }
 
 ```Predefined Dom elements```
@@ -27,11 +27,11 @@ Title | Dom {
 	html_element = 'title'
 	title,
 
-	new { title ->
+	new { title;
 		.title = title
 	}
 
-	render { -> title }
+	render {; title }
 }
 
 # Headings
@@ -77,12 +77,12 @@ A | Dom {
 	html_href,
 	title,
 
-	new { href, title ->
+	new { href, title;
 		html_href = href
 		.title = title
 	}
 
-	render { -> title }
+	render {; title }
 }
 
 Strong | Dom {

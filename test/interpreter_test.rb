@@ -64,35 +64,35 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_anonymous_func_expr
-		out = Ore.interp '{->}'
+		out = Ore.interp '{;}'
 		assert_instance_of Ore::Func, out
 		assert_empty out.expressions
 		refute out.name
 	end
 
 	def test_empty_func_declaration
-		out = Ore.interp 'open {->}'
+		out = Ore.interp 'open {;}'
 		assert_instance_of Ore::Func, out
 		assert_empty out.expressions
 		assert_equal 'open', out.name.value
 	end
 
 	def test_basic_func_declaration
-		out = Ore.interp 'enter { numbers = "4815162342" -> }'
+		out = Ore.interp 'enter { numbers = "4815162342"; }'
 		assert_equal 1, out.expressions.count
 		assert_instance_of Ore::Param_Expr, out.expressions.first
 		assert_instance_of Ore::String_Expr, out.expressions.first.default
 	end
 
 	def test_advanced_func_declaration
-		out = Ore.interp 'add { a, b -> a + b }'
+		out = Ore.interp 'add { a, b; a + b }'
 		assert_equal 3, out.expressions.count
 		assert_instance_of Ore::Infix_Expr, out.expressions.last
 		refute out.expressions.first.default
 	end
 
 	def test_complex_func_declaration
-		out = Ore.interp 'run { a, labeled b, c = 4, labeled d = 8 ->
+		out = Ore.interp 'run { a, labeled b, c = 4, labeled d = 8;
 			c + d
 		}'
 		assert_equal 5, out.expressions.count
@@ -129,7 +129,7 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp 'Hatch {
 			computer = nil
 
-			enter { numbers ->
+			enter { numbers;
 				# do something with the numbers
 			}
 		}'
@@ -167,7 +167,7 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp 'assign_to_nil,'
 		assert_instance_of NilClass, out
 
-		out = Ore.interp 'func { assign_to_nil -> }'
+		out = Ore.interp 'func { assign_to_nil; }'
 		assert_instance_of Ore::Func, out
 		assert_instance_of Ore::Param_Expr, out.expressions.first
 		assert_equal 'assign_to_nil', out.expressions.first.name.value
@@ -481,7 +481,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_assigning_function_to_variable
-		out = Ore.interp 'funk = { a, b, c -> }'
+		out = Ore.interp 'funk = { a, b, c; }'
 		assert_equal 3, out.expressions.count
 	end
 
@@ -519,7 +519,7 @@ class Interpreter_Test < Base_Test
 			x = 0
 			y = 0
 
-			to_s { ->
+			to_s {;
 				"Transform!"
 			}
 		}'
@@ -556,11 +556,11 @@ class Interpreter_Test < Base_Test
 			x = 4
 			y = 8
 
-			to_s { ->
+			to_s {;
 				"Transform!"
 			}
 
-			new { position -> }
+			new { position; }
 		}, Transform.new'
 		assert_kind_of Ore::Instance, out
 		assert_equal 'Transform', out.name
@@ -617,13 +617,13 @@ class Interpreter_Test < Base_Test
 
 	def test_function_call_with_arguments
 		out = Ore.interp '
-		add { a, b -> a+b }
+		add { a, b; a+b }
 		add(4, 8)'
 		assert_equal 12, out
 	end
 
 	def test_compound_operator
-		out = Ore.interp 'add { amount = 1, to = 0 ->
+		out = Ore.interp 'add { amount = 1, to = 0;
 			to += amount
 		}
 		add(5, 37)'
@@ -656,7 +656,7 @@ class Interpreter_Test < Base_Test
 	def test_closures_do_capture_values
 		out = Ore.interp '
 		counter = -1
-		increment { count ->
+		increment { count;
 			counter += count
 		}
 		increment(counter)
@@ -668,7 +668,7 @@ class Interpreter_Test < Base_Test
 	def test_calling_functions
 		refute_raises RuntimeError do
 			out = Ore.interp '
-			square { input ->
+			square { input;
 				input * input
 			}
 
@@ -680,7 +680,7 @@ class Interpreter_Test < Base_Test
 
 	def test_function_call_as_argument
 		out = Ore.interp '
-		add { amount = 1, to = 4 ->
+		add { amount = 1, to = 4;
 			to + amount
 		}
 		inc = add() # should return 5
@@ -732,7 +732,7 @@ class Interpreter_Test < Base_Test
 
 	def test_function_scope
 		out = Ore.interp 'x = 123
-		double { -> x * 2 }
+		double {; x * 2 }
 		double()'
 		assert_equal 246, out
 	end
@@ -741,7 +741,7 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp 'x = 108
 
 		Doubler {
-			double { -> x * 2 }
+			double {; x * 2 }
 		}
 
 		Doubler().double()'
@@ -754,7 +754,7 @@ class Interpreter_Test < Base_Test
 		assert_equal 1, out.value
 
 		out = Ore.interp '
-		eject { ->
+		eject {;
 			if true
 				return "true!"
 			end
@@ -768,7 +768,7 @@ class Interpreter_Test < Base_Test
 	def test_type_does_have_new_function
 		out = Ore.interp '
 		Atom {
-			new {->}
+			new {;}
 		}'
 		assert out.has? :new
 	end
@@ -776,7 +776,7 @@ class Interpreter_Test < Base_Test
 	def test_instance_does_not_have_new_function
 		out = Ore.interp '
 		Atom {
-			new {->}
+			new {;}
 		}
 		a = Atom()
 		b = Atom.new()
@@ -888,12 +888,12 @@ class Interpreter_Test < Base_Test
 		Vec2 {
 			x = 0, y = 0
 
-			new { x, y ->
+			new { x, y;
 				.x = x
 				.y = y
 			}
 
-			multiply! { times ->
+			multiply! { times;
 				.x *= times
 				.y *= times
 			}
@@ -901,16 +901,16 @@ class Interpreter_Test < Base_Test
 		}
 
 		Transform | Vec2 {
-			new { position = Vec2() ->
+			new { position = Vec2();
 				.x = position.x
 				y = position.y
 			}
 
-			to_s { ->
+			to_s {;
 				'Transform(|x|,|y|)'
 			}
 
-			scale! { value ->
+			scale! { value;
 				multiply!(value)
 			}
 		}
@@ -941,14 +941,14 @@ class Interpreter_Test < Base_Test
 			Vec2 {
 				x = 0, y = 0
 
-				new { x, y ->
+				new { x, y;
 					.x = x
 					.y = y
 				}
 			}
 
 			Transform | Vec2 {
-				new { position = Vec2() ->
+				new { position = Vec2();
 					.x = position.x
 					y = position.y
 				}
@@ -1082,7 +1082,7 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_routes
-		out = Ore.interp 'get://some/thing/:id { id ->
+		out = Ore.interp 'get://some/thing/:id { id;
 			do_something()
 		}'
 
@@ -1100,7 +1100,7 @@ class Interpreter_Test < Base_Test
 			class = 'my_class'
 			data_something = 'some data attribute'
 
-			render { ->
+			render {;
 				'Text content of this div'
 			}
 		}
@@ -1226,11 +1226,11 @@ class Interpreter_Test < Base_Test
 		    Numbers {
 		    	numbers = []
 
-				new { numbers ->
+				new { numbers;
 					.numbers = numbers
 				}
 
-		    	multiply { by ->
+		    	multiply { by;
 					result = []
 		    		for .numbers
 		    			result.push(it * by)
@@ -1568,13 +1568,13 @@ class Interpreter_Test < Base_Test
 			x = 0
 			y = 0
 
-			new { x, y ->
+			new { x, y;
 				.x = x
 				.y = y
 			}
 		}
 
-		add { @vec ->
+		add { @vec;
 			x + y
 		}
 
@@ -1589,13 +1589,13 @@ class Interpreter_Test < Base_Test
 			a = 0
 			b = 0
 
-			new { a, b ->
+			new { a, b;
 				.a = a
 				.b = b
 			}
 		}
 
-		calc { ->
+		calc {;
 			p = Point(10, 20)
 			@ += p
 			a + b
@@ -1611,7 +1611,7 @@ class Interpreter_Test < Base_Test
 			a = 0
 			b = 0
 
-			new { a, b ->
+			new { a, b;
 				.a = a
 				.b = b
 			}
@@ -1633,17 +1633,17 @@ class Interpreter_Test < Base_Test
 			a = 0
 			b = 0
 
-			new { a, b ->
+			new { a, b;
 				.a = a
 				.b = b
 			}
 		}
 
-		outer { ->
+		outer {;
 			p = Point(23, 42)
 			@ += p
 
-			inner { ->
+			inner {;
 				a + b
 			}
 
@@ -1685,12 +1685,12 @@ class Interpreter_Test < Base_Test
 		    	./static = 15
 		    	./_static_private = 16
 
-				calling_private_through_instance { -> _private }
-		    	calling_static_through_instance { -> static }
-		    	calling_static_private_through_instance { -> _static_private }
+				calling_private_through_instance {; _private }
+		    	calling_static_through_instance {; static }
+		    	calling_static_private_through_instance {; _static_private }
 
-		    	./calling_static_through_static { -> static }
-		    	./calling_static_private_througb_static { -> _static_private }
+		    	./calling_static_through_static {; static }
+		    	./calling_static_private_througb_static {; _static_private }
 		    }
 		CODE
 
@@ -1813,7 +1813,7 @@ class Interpreter_Test < Base_Test
 		end
 
 		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
-			Ore.interp "Type { @super 123 -> }"
+			Ore.interp "Type { @super 123, }"
 		end
 	end
 
@@ -2076,7 +2076,7 @@ class Interpreter_Test < Base_Test
 		    	a = 0
 		    	b = 0
 
-		    	new { a, b ->
+		    	new { a, b;
 		    		.a = a
 		    		.b = b
 		    	}
@@ -2110,7 +2110,7 @@ class Interpreter_Test < Base_Test
 	def test_using_pound_proxy_as_expression
 		code = <<~CODE
 		    String | String {
-		        upcase { ->
+		        upcase {;
 		        	@super + " (SWIZZLED)"
 		        }
 		    }
@@ -2161,7 +2161,7 @@ class Interpreter_Test < Base_Test
 		@use 'ore/server.ore'
 
 		App | Server {
-			get:// home {->
+			get:// home {;
 				title = 'My Page'
 				```html
 				<h1>|title|</h1>

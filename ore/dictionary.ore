@@ -1,11 +1,11 @@
 Dictionary {
-	keys { -> @super }
-	values { -> @super }
-	has_key? { key -> @super }
-	delete { key -> @super }
-	merge { other -> @super }
-	count { -> @super }
-	empty? { -> @super }
-	clear { -> @super }
-	fetch { key, default -> @super }
+	keys {; @super }
+	values {; @super }
+	has_key? { key; @super }
+	delete { key; @super }
+	merge { other; @super }
+	count {; @super }
+	empty? {; @super }
+	clear {; @super }
+	fetch { key, default; @super }
 }
