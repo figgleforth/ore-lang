@@ -1,5 +1,6 @@
 require_relative 'shared/constants'
 require_relative 'shared/helpers'
+require_relative 'shared/ascii'
 require_relative 'shared/super_proxies'
 require_relative 'shared/stage'
 require_relative 'shared/pipeline'
@@ -46,13 +47,13 @@ module Ore
 		shutdown        = false
 
 		Signal.trap 'INT' do
-			puts "░ Shutting down safely"
+			puts Ore::Ascii.dim "░ Shutting down safely"
 			shutdown = true
 			Thread.main.raise Interrupt
 		end
 
 		Signal.trap 'TERM' do
-			puts "░ Shutting down safely"
+			puts Ore::Ascii.dim "░ Shutting down safely"
 			shutdown = true
 			Thread.main.raise Interrupt
 		end
@@ -78,16 +79,17 @@ module Ore
 
 					unless listener
 						listener = Listen.to('.', only: /\.(ore|rb)$/) do |modified, added, removed|
-							puts "▓▒░ Reloading because of changes to rb|ore files"
+							puts Ore::Ascii.dim "▓▒░ Reloading due to rb|ore file changes"
 							reload = true
 							current_servers.each(&:stop)
 						end
 						listener.start
 					end
 
-					puts "▓▒░ Press ctrl+c to shut down"
+					puts Ore::Ascii.dim "▓▒░ Press ctrl+c to shut down"
 
 					current_servers.each do |server|
+						puts Ore::Ascii.dim "▓▒░ Ore Server named `#{server.server_instance.name}` started at http://localhost:#{server.port}"
 						server.server_thread&.join
 					end
 				end

@@ -59,6 +59,24 @@ module Ore
 			query_string = request.query_string
 			http_method  = request.request_method.downcase
 			path_parts   = request.path.split('/').reject { _1.empty? }
+			body_hash    = URI.decode_www_form(request.body || "").to_h
+			headers_hash = request.header.to_h
+
+			### Print some useful stuff
+			req_info = "▓▒░ "
+			unless body_hash.empty?
+				req_info = req_info.prepend Ascii.green
+			end
+
+			req_info << Ascii.dim(http_method.upcase.rjust(7, ' '))
+			req_info << " "
+			req_info << Ascii.reset(path_string.gsub("/", "#{Ascii.dim('/')}#{Ascii.reset}"))
+
+			unless body_hash.empty?
+				req_info << " #{Ascii.dim body_hash}"
+			end
+			puts req_info
+			### end print
 
 			# Cookies! request.cookies gives us an array of WEBrick::Cookie
 			# note: The cookie is set below somewhere in a javascript snippet using the same key BROWSER_VIEW_SIZE. We read it here to then declare it in the global scope for Dom elements to use
@@ -71,17 +89,15 @@ module Ore
 				interpreter.runtime.stack.first.declare BROWSER_VIEW_SIZE, size
 			end
 
-			target_route = match_route http_method, path_parts, routes
+			route_function = match_route http_method, path_parts, routes
 
-			if target_route
-				url_params   = extract_url_params path_parts, target_route
+			if route_function
+				url_params   = extract_url_params path_parts, route_function
 				query_params = parse_query_string query_string
 
 				req = Ore::Request.new
 				interpreter.link_instance_to_type req, 'Request'
 
-				body_hash    = URI.decode_www_form(request.body || "").to_h
-				headers_hash = request.header.to_h
 				body_dict    = Ore::Dictionary.new body_hash
 				query_dict   = Ore::Dictionary.new query_params
 				params_dict  = Ore::Dictionary.new url_params
@@ -112,7 +128,7 @@ module Ore
 					interpreter.link_instance_to_type res, 'Response'
 
 					# The route handler could return Html|Dom, Body|Dom etc, or even just a string. Sounds like I have to make sure the format of the final Html is correct
-					result = interpreter.interp_route_handler target_route, req, res, url_params, server_instance: @server_instance
+					result = interpreter.interp_route_handler route_function, req, res, url_params, server_instance: @server_instance
 
 					# Apply response object's configuration to WEBrick response
 					response.status = res.declarations['status'] || res.status
@@ -189,7 +205,7 @@ module Ore
 		end
 
 		def start
-			@webrick_server = WEBrick::HTTPServer.new Port: port
+			@webrick_server = WEBrick::HTTPServer.new Port: port, Logger: WEBrick::Log.new("/dev/null"), AccessLog: []
 
 			webrick_server.mount_proc '' do |req, res|
 				handle_request req, res, @routes
@@ -198,8 +214,6 @@ module Ore
 			@server_thread = Thread.new do
 				webrick_server.start
 			end
-
-			puts "---> Ore Server Started at http://localhost:#{port}"
 
 			server_thread
 		end

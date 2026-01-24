@@ -1,40 +1,4 @@
 module Ore
-	module Colors
-		RESET     = "\e[0m"
-		RED       = "\e[31m"
-		DEFAULT   = "\e[217m"
-		YELLOW    = "\e[33m"
-		CYAN      = "\e[36m"
-		BOLD      = "\e[1m"
-		WHITE     = "\e[37m"
-		UNDERLINE = "\e[4m"
-		ITALIC    = "\e[3m"
-
-		def self.make str, foreground = "31", background = "31"
-			enabled? ? "\x1b[#{foreground};#{background}m#{str}#{RESET}" : str
-		end
-
-		def self.enabled?
-			$stdout.tty? && ENV['TERM'] != 'dumb' && !ENV['NO_COLOR']
-		end
-
-		def self.red str
-			enabled? ? "#{RED}#{str}#{RESET}" : str
-		end
-
-		def self.yellow str
-			enabled? ? "#{YELLOW}#{str}#{RESET}" : str
-		end
-
-		def self.cyan str
-			enabled? ? "#{CYAN}#{str}#{RESET}" : str
-		end
-
-		def self.bold str
-			enabled? ? "#{BOLD}#{str}#{RESET}" : str
-		end
-	end
-
 	class Error_Formatter
 		attr_reader :error, :expression, :runtime
 
@@ -49,7 +13,7 @@ module Ore
 		end
 
 		def error_name_styled
-			Colors.bold(Colors.red(error.class.name.split('::').last))
+			Ore::Ascii.bold(Ore::Ascii.red(error.class.name.split('::').last))
 		end
 
 		def format
@@ -64,7 +28,7 @@ module Ore
 				parts << ""
 			end
 
-			parts << Colors.cyan(location_line)
+			parts << Ore::Ascii.cyan(location_line)
 			parts.join "\n"
 		end
 
@@ -110,7 +74,7 @@ module Ore
 
 				# Expand tabs once per line for consistent display
 				visual_content = line_content.gsub("\t", "    ")
-				prefix         = Colors.cyan("#{line_num.to_s.rjust(5)} │ ")
+				prefix         = Ore::Ascii.cyan("#{line_num.to_s.rjust(5)} │ ")
 
 				is_error_line = (line_num >= l0 && line_num <= l1)
 
@@ -130,19 +94,19 @@ module Ore
 					after      = visual_content[visual_end_char_count..-1] || ""
 
 					# Apply color/style to the error span
-					styled_span = Colors.bold(Colors.red(error_span))
+					styled_span = Ore::Ascii.bold(Ore::Ascii.red(error_span))
 
 					# Use Colors.make only for the single-line case where we want a different style
 					if l0 == l1 && line_num == l0
-						styled_span = Colors.bold(Colors.make(error_span))
+						styled_span = Ore::Ascii.bold(Ore::Ascii.make(error_span))
 					end
 
 					snippet_lines << prefix + before + styled_span + after
 					spaces      = " " * visual_start_char_count
 					error_label = error_name.gsub '_', ' '
 
-					prefix     = Colors.cyan("#{' '.rjust(5)} │ ")
-					error_line = spaces + Colors.bold(Colors.red("╰── " + error_label))
+					prefix     = Ore::Ascii.cyan("#{' '.rjust(5)} │ ")
+					error_line = spaces + Ore::Ascii.bold(Ore::Ascii.red("╰── " + error_label))
 					snippet_lines << prefix + error_line
 				else
 					# Regular surrounding line
