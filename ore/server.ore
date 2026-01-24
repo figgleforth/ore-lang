@@ -18,7 +18,7 @@ Response {
 Server {
 	port,
 
-	new { port = 80;
+	new { port = 8080;
 		.port = port
 	}
 }
