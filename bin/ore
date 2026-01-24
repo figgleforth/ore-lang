@@ -58,7 +58,7 @@ begin
 		pp Ore.interp_file ARGV[1], with_std: false
 	else
 		if ARGV[0]
-			puts Ore.interp_file_with_hot_reload ARGV[0]
+			Ore.interp_file_with_hot_reload ARGV[0]
 		else
 			puts "Error: No file specified.\n#{INSTRUCTIONS}"
 			exit 1
