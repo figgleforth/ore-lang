@@ -21,4 +21,15 @@ Server {
 	new { port = 8080;
 		.port = port
 	}
+
+	# note: The following routes prevent 500 errors since we're handling all routes here, nothing is filtered.
+	get://favicon.ico {;
+		response.status = 200
+		''
+	}
+
+	get://apple-touch-icon-precomposed.png {;
+		response.status = 200
+		''
+	}
 }
