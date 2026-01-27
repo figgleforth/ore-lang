@@ -700,7 +700,7 @@ module Ore
 
 				copy_location expr, receiver
 				return complete_expression expr, precedence
-			elsif subscript
+			elsif subscript && (precedence_for(curr_lexeme.value) > precedence)
 				it            = Ore::Subscript_Expr.new
 				it.receiver   = expr
 				it.expression = parse_circumfix_expr opening: curr_lexeme.value

@@ -431,4 +431,47 @@ class Regression_Test < Base_Test
 		ORE
 		assert_equal 42, out
 	end
+
+	# Regression: subscript should bind after dot, so a.b[c] parses as (a.b)[c] not a.(b[c])
+	def test_subscript_precedence_with_dot_access
+		# Parser test: verify AST structure
+		ast = Ore.parse('a.b[0]').first
+		assert_instance_of Ore::Subscript_Expr, ast
+		assert_instance_of Ore::Infix_Expr, ast.receiver
+		assert_equal '.', ast.receiver.operator.value
+
+		# Interpreter test: chained dot + subscript read
+		out = Ore.interp <<~ORE
+		    Box {
+		        items = [10, 20, 30]
+		    }
+		    b = Box()
+		    b.items[1]
+		ORE
+		assert_equal 20, out
+
+		# Interpreter test: chained dot + subscript assignment
+		out = Ore.interp <<~ORE
+		    Box {
+		        data = {x: 1, y: 2}
+		    }
+		    b = Box()
+		    b.data[:z] = 3
+		    b.data[:z]
+		ORE
+		assert_equal 3, out
+
+		# Deeper chain: a.b.c[d]
+		out = Ore.interp <<~ORE
+		    Inner {
+		        values = [100, 200]
+		    }
+		    Outer {
+		        inner = Inner()
+		    }
+		    o = Outer()
+		    o.inner.values[0]
+		ORE
+		assert_equal 100, out
+	end
 end
