@@ -20,7 +20,7 @@ module Ore
 		def html_attrs
 			@html_attrs ||= dom.declarations.reject do |key, _|
 				# This identifier is just used to determine the element to render, so it shouldn't be included as an attribute of the final HTML string.
-				key == 'html_element' || key == 'html_onclick'
+				key == 'html_element' || key == 'onclick'
 			end.select do |key, v|
 				key.to_s.start_with? HTML_PREFIX
 			end.map do |key, value|
@@ -31,7 +31,11 @@ module Ore
 		end
 
 		def onclick_expr
-			dom.declarations['html_onclick']
+			dom.declarations['onclick']
+		end
+
+		def is_input_element?
+			%w[input textarea select].include? element
 		end
 
 		def css_attrs
@@ -70,7 +74,11 @@ module Ore
 				end
 
 				if onclick_expr
-					html << " data-ore-onclick=\"#{onclick_expr.object_id}\""
+					html << " data-ore-onclick=\"#{onclick_expr.hash}\""
+				end
+
+				if is_input_element?
+					html << " data-ore-id=\"#{dom.hash}\""
 				end
 
 				html << ">"

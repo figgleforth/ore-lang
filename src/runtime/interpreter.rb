@@ -164,9 +164,13 @@ module Ore
 			end
 
 			renderer = Ore::Dom_Renderer.new dom_instance, inner_html
-			# todo: What do I do with this onclick expression? It could be any expression right now, but it should usually be a function that does something.
+
 			if renderer.onclick_expr
 				runtime.add_onclick_handler renderer.onclick_expr
+			end
+
+			if renderer.is_input_element?
+				runtime.add_input_element dom_instance
 			end
 
 			renderer.to_html_string
@@ -404,6 +408,12 @@ module Ore
 				assignment_scope.static_declarations.add expr.left.value.to_s
 			end
 
+			# If assigning to a Type via @cd, also append to its expressions so future instances inherit it
+			if assignment_scope.is_a?(Ore::Type) && runtime.cd_scopes.include?(assignment_scope)
+				assignment_scope.expressions ||= []
+				assignment_scope.expressions << expr
+			end
+
 			return right_value
 		end
 
@@ -584,7 +594,8 @@ module Ore
 					when '-='
 						right = interpret expr.right
 						raise Ore::Invalid_Unpack_Infix_Right_Operand.new(expr, runtime) if right && !(right.is_a? Ore::Scope)
-						runtime.stack.last.sibling_scopes.delete right # todo: Warn or error when trying to -= a scope that isn't a sibling?
+						runtime.stack.last.sibling_scopes.delete right
+						# todo: Warn or error when trying to -= a scope that isn't a sibling?
 					else
 						raise Invalid_Unpack_Infix_Operator.new(expr, runtime)
 					end
@@ -1429,6 +1440,16 @@ module Ore
 				database = interpret expr.expression
 				database.create_connection!
 				database
+
+			when 'cd' # This is potentially destructive, you have write access to the scope
+				target = interpret expr.expression
+				if expr.expression.value == '..'
+					popped = runtime.pop_scope
+					runtime.cd_scopes.delete popped
+				elsif target
+					runtime.push_scope target
+					runtime.cd_scopes.add target
+				end
 
 			when Ore::IMPORT_FILE_DIRECTIVE
 				# Standalone load is interpreted into current scope by passing the scope into runtime#load_file

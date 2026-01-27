@@ -1,5 +1,6 @@
 require 'webrick'
 require 'cgi'
+require 'json'
 
 module Ore
 	class Server_Runner
@@ -84,9 +85,19 @@ module Ore
 				handler   = interpreter.runtime.onclick_handlers[object_id]
 				if handler
 					begin
-						# handler is a Func < Scope -> @expressions @static @arguments
-						# Push the proper scope chain (instance, type, and function scopes)
 						runtime = interpreter.runtime
+
+						# Update input element values from the request body
+						if request.body && !request.body.empty?
+							json_body = JSON.parse request.body rescue {}
+							inputs    = json_body['inputs'] || {}
+							inputs.each do |element_id, value|
+								input_instance = runtime.input_elements[element_id.to_i]
+								input_instance.declare 'value', value if input_instance
+							end
+						end
+
+						# Push the proper scope chain (instance, type, and function scopes)
 						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
 							type = handler.enclosing_scope.enclosing_scope
 							runtime.push_scope type.enclosing_scope if type.enclosing_scope
@@ -104,7 +115,19 @@ module Ore
 							runtime.pop_scope # type
 							runtime.pop_scope if type.enclosing_scope
 						end
-						# todo: Do something with the result?
+
+						# Do something with the result
+						component = handler.enclosing_scope
+						if component.is_a?(Ore::Instance) && component.declarations['render']
+							new_html = interpreter.render_dom_to_html component
+							html_id  = component.declarations['html_id']
+
+							response.status             = 200
+							response['Content-Type']    = 'text/html'
+							response['X-Ore-Target-Id'] = html_id if html_id
+							response.body               = new_html
+							return
+						end
 					rescue => e
 						warn "\n[Ore Onclick Error] #{e.class}: #{e.message}"
 						warn e.backtrace.first(10).map { |line| "  #{line}" }.join("\n")
@@ -240,11 +263,13 @@ module Ore
 			# This receives requests from dom.js
 			webrick_server.mount_proc '/onclick/' do |req, res|
 				puts Ascii.dim "▓▒░ #{'DOM'.rjust(7, ' ')} #{req.path}"
+				handle_request req, res, @routes
+				# todo: Old handlers accumulate if you navigate away, since they stay in memory, maybe some unmount process
+				# todo: A way to deregister handlers when a component is no longer rendered
 			end
 
 			# This receives the rest of the requests
 			webrick_server.mount_proc '' do |req, res|
-				puts "url received received"
 				handle_request req, res, @routes
 			end
 

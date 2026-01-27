@@ -1,0 +1,72 @@
+# Counter Example
+# Demonstrates reactive state management with server-side re-rendering.
+# When the button is clicked, the count increments and the UI updates
+# without a full page reload.
+
+@use 'ore/html.ore'
+@use 'ore/server.ore'
+
+# @cd pushes a Type onto the scope stack, allowing you to modify its
+# definition. These changes are appended to Button's expressions, so
+# all future Button instances will inherit them.
+@cd Button
+	css_filter = 'invert()'
+@cd ..
+
+# Counter is a Div component with reactive state.
+# When rendered, the runtime registers the onclick handler, which holds
+# a reference to this Counter instance. This keeps the instance alive
+# in memory, allowing state to persist across requests.
+Counter | Div {
+	html_id = 'counter'  # Used by dom.js to target this element for updates
+	button = Button("Increment Count!")
+	count = 0  # Reactive state - persists in memory between clicks
+
+	# This handler mutates the Counter instance's state.
+	# After execution, the server automatically re-renders the Counter
+	# and sends the updated HTML back to the browser.
+	increment = {;
+		count += 1
+	}
+
+	# The render function returns the component's HTML structure.
+	# It's called on initial page load and after each onclick handler executes.
+	render {;
+		[H2("The count is: `count`"), Form(button)]
+	}
+
+	# @cd with an instance (lowercase) modifies just that specific instance,
+	# not the type. Here we're styling this particular button.
+	@cd button
+		css_background_color = 'red'
+		css_color = 'white'
+		css_font_weight = 700
+		css_border_radius = '0.5rem'
+		css_padding = '0.5rem'
+		css_font_size = '1.3em'
+		onclick = increment  # Registers handler in runtime.onclick_handlers
+	@cd ..
+}
+
+# Page wraps the Counter in an Html element.
+# Note: Each Page() call creates a new Counter instance.
+Page | Html {
+	css_filter = 'invert()'
+
+	render {;
+		Counter()
+	}
+}
+
+# App is the server that handles HTTP requests.
+# The get:// route returns a Page, which renders the Counter.
+App | Server {
+	get:// home {;
+		Page()
+	}
+}
+
+# @start launches the server in a background thread.
+# The Counter's state persists because onclick handlers hold references
+# to their enclosing scope (the Counter instance).
+@start App()

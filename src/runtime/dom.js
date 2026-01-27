@@ -24,16 +24,22 @@
 
 		const url = `/onclick/${object_id}`
 		const response = await fetch(url, {
-			method: 'POST', // Specify the method
+			method: 'POST',
 			headers: {
-				'Content-Type': 'application/json', // Inform the server the body is JSON
-			}
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({inputs})
 		})
-		const body = await response.text()
-		console.log(`Response from ${url}: ${body}`)
 
-		// const target_id = response.headers.get('X-Ore-Target-id')
-		// console.log('X-Ore-Target-id: ', target_id)
-		// document.querySelector(target).innerHTML = html
+		const body = await response.text()
+		const targetId = response.headers.get('X-Ore-Target-Id')
+		if (targetId && body) {
+			const target = document.getElementById(targetId)
+			if (target) {
+				target.outerHTML = body
+			}
+		} else if (body) {
+			document.documentElement.outerHTML = body
+		}
 	})
 })()

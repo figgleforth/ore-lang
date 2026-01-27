@@ -1,0 +1,33 @@
+# Counter Example (Plain)
+# A minimal example of reactive state with server-side re-rendering.
+
+@use 'ore/html.ore'
+@use 'ore/server.ore'
+
+# Counter component with in-memory state
+Counter | Div {
+	html_id = 'counter'  # Target element for DOM updates
+	button = Button("Increment Count!")
+	count = 0  # State persists between clicks
+
+	# Onclick handler - mutates state, triggers re-render
+	increment = {;
+		count += 1
+	}
+
+	# Called on page load and after each click
+	render {;
+		button.onclick = increment  # Register handler with runtime
+		[H2("The count is: `count`"), Form(button)]
+	}
+}
+
+# Server with a single route
+App | Server {
+	get:// home {;
+		Html(Counter())
+	}
+}
+
+# Start the server
+@start App()

@@ -1,0 +1,52 @@
+# Todo List Example
+# Demonstrates form input handling with server-side state.
+# Input values are sent to the server on click, allowing
+# handlers to read what the user typed.
+
+@use 'ore/html.ore'
+@use 'ore/server.ore'
+
+# Custom textarea component
+Todo_Input | Textarea {}
+
+# List component that renders children as <li> elements
+Todos_Ul | Ul {
+	render {;
+		for children map
+			Li(it)
+		end
+	}
+}
+
+# Main todo app component
+Todo_App | Div {
+	html_id = 'todos'  # Target element for DOM updates
+	todos = []         # In-memory state - list of todo strings
+	input = Todo_Input()
+
+	# Handler reads input.value - the current textarea content.
+	# dom.js collects all input values and sends them with the
+	# onclick request. The server updates input.value before
+	# this handler runs.
+	add_todo = {;
+		todos.push(input.value)
+	}
+
+	render {;
+		button = Button("Add Todo")
+		button.onclick = add_todo
+
+		Form([input, button, Todos_Ul(todos)])
+	}
+}
+
+# Create instance outside the server so state persists across requests
+todo_app = Todo_App()
+
+App | Server {
+	get:// home {;
+		Html(todo_app)
+	}
+}
+
+@start App()
