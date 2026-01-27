@@ -13,6 +13,10 @@
 	css_filter = 'invert()'
 @cd ..
 
+H2 | H2 {
+	css_color = 'black'
+}
+
 # Counter is a Div component with reactive state.
 # When rendered, the runtime registers the onclick handler, which holds
 # a reference to this Counter instance. This keeps the instance alive
@@ -50,19 +54,20 @@ Counter | Div {
 
 # Page wraps the Counter in an Html element.
 # Note: Each Page() call creates a new Counter instance.
-Page | Html {
-	css_filter = 'invert()'
+Page | Div {
+	counter = Counter()
 
 	render {;
-		Counter()
+		counter
 	}
 }
 
 # App is the server that handles HTTP requests.
 # The get:// route returns a Page, which renders the Counter.
 App | Server {
+	page = Page()
 	get:// home {;
-		Page()
+		Body(page)
 	}
 }
 

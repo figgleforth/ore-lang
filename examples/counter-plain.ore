@@ -24,8 +24,9 @@ Counter | Div {
 
 # Server with a single route
 App | Server {
+	counter = Counter()
 	get:// home {;
-		Html(Counter())
+		Html(counter)
 	}
 }
 
