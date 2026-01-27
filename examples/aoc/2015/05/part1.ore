@@ -46,7 +46,7 @@ has_forbidden? { input;
 	input.include?('ab') or input.include?('cd') or input.include?('pq') or input.include?('xy')
 }
 
-input = Inout.read('examples/aoc/2015/05/input.txt').split('\n')
+input = File_System.read('examples/aoc/2015/05/input.txt').split('\n')
 
 total = 0
 for input

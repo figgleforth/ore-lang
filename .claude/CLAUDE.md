@@ -319,16 +319,16 @@ Methods: `to_s()`, `abs()`, `floor()`, `ceil()`, `round()`, `sqrt()`, `even?()`,
 
 Defined in: `ore/number.ore`, implemented in `scopes.rb` as `Ore::Number`
 
-### Inout (File I/O)
+### File_System (File I/O)
 
 Static methods for reading and writing files:
 
 ```ore
-content = Inout.read('./path/to/file.txt')  # Read file contents as string
-Inout.write_string_to_file('./path/to/file.txt', 'Hello, World!')  # Write string to file
+content = File_System.read('./path/to/file.txt')  # Read file contents as string
+File_System.write_string_to_file('./path/to/file.txt', 'Hello, World!')  # Write string to file
 ```
 
-Defined in: `ore/inout.ore`, implemented in `scopes.rb` as `Ore::Inout`
+Defined in: `ore/file_system.ore`, implemented in `scopes.rb` as `Ore::File_System`
 
 ## Loop Control Flow
 

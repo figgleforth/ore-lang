@@ -14,7 +14,7 @@ For example:
 - ^v^v^v^v^v delivers a bunch of presents to some very lucky children at only 2 houses.
 ```
 
-input = Inout.read('examples/aoc/2015/03/input.txt')
+input = File_System.read('examples/aoc/2015/03/input.txt')
 
 # "x.y": num_presents
 visited = {}

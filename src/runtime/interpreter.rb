@@ -105,6 +105,9 @@ module Ore
 				end
 			when Ore::Type
 				if binding == :instance
+					# todo: This does not print the correct code location, here is a paste of the output:
+					#       Cannot_Call_Instance_Member_On_Type
+					#       :1:1
 					raise Ore::Cannot_Call_Instance_Member_On_Type.new(expr, runtime)
 				elsif privacy == :private
 					raise Ore::Cannot_Call_Private_Static_Member_On_Type.new(expr, runtime)
@@ -112,16 +115,17 @@ module Ore
 			end
 		end
 
-		# todo: Maybe this should go on Ore::Server?
+		# todo: Maybe this should go on Ore::Server_Runner?
 		def collect_routes_from_instance instance
 			routes = {}
 
+			# This iterates composed types to find any
 			instance.types.each do |type_name|
-				type_def = runtime.stack.first[type_name]
-				next unless type_def && type_def.respond_to?(:routes) && type_def.routes
+				composed_type = runtime.stack.first.get type_name
+				next unless composed_type && composed_type.respond_to?(:routes) && composed_type.routes
 
 				# Merge routes from this type
-				type_def.routes.each do |key, route|
+				composed_type.routes.each do |key, route|
 					routes[key] ||= route
 				end
 			end
@@ -159,7 +163,13 @@ module Ore
 				end
 			end
 
-			Ore::Dom_Renderer.new(dom_instance, inner_html).to_html_string
+			renderer = Ore::Dom_Renderer.new dom_instance, inner_html
+			# todo: What do I do with this onclick expression? It could be any expression right now, but it should usually be a function that does something.
+			if renderer.onclick_expr
+				runtime.add_onclick_handler renderer.onclick_expr
+			end
+
+			renderer.to_html_string
 		end
 
 		def interp_identifier expr
@@ -785,6 +795,7 @@ module Ore
 				end
 			end
 
+			instance.name            = type.name
 			instance.types           = type.types
 			instance.enclosing_scope = type
 
@@ -979,7 +990,6 @@ module Ore
 			end
 
 			if result.is_a? ::String
-				res.body_content         = result
 				res.declarations['body'] = result
 			elsif result.is_a? Ore::Array
 				html = ''
@@ -990,16 +1000,13 @@ module Ore
 						html += render_dom_to_html it
 					end
 				end
-				res.body_content         = html
 				res.declarations['body'] = html
 			elsif result.is_a? Ore::Instance
 				# todo: Maybe find a better class name than Dom, and add a constant for it.
 				if result.types.include? 'Dom'
 					html                     = render_dom_to_html result
-					res.body_content         = html
 					res.declarations['body'] = html
 				else
-					res.body_content         = result.inspect
 					res.declarations['body'] = result.inspect
 				end
 			end
@@ -1045,8 +1052,8 @@ module Ore
 				_1.empty?
 			end
 
-			route_key = if func.name
-				func.name
+			route_key = if func.name&.value
+				func.name.value
 			else
 				# Anonymous route with auto-generated key: "method:path"
 				"#{route.http_method.value}:#{route.path}"
@@ -1409,11 +1416,10 @@ module Ore
 			when 'start'
 				server_instance = interpret expr.expression
 				unless server_instance.is_a? Ore::Instance
-					raise Ore::Invalid_Start_Diretive_Argument.new(expr, runtime)
+					raise Ore::Invalid_Start_Directive_Argument.new(expr, runtime)
 				end
 
-				routes = collect_routes_from_instance server_instance
-
+				routes        = collect_routes_from_instance server_instance
 				server_runner = Ore::Server_Runner.new server_instance, self, routes
 				runtime.servers << server_runner
 
@@ -1535,6 +1541,11 @@ module Ore
 					throw :stop
 				end
 			when nil
+				# when ::Array
+				# 	# todo: I'm not sure if this should go here, but it seems fitting in case I want to interpret multiple expressions
+				# 	expr.each do |expr|
+				# 		interpret expr
+				# 	end
 			else
 				raise Ore::Interpret_Expr_Not_Implemented.new(expr, runtime)
 			end

@@ -3,18 +3,18 @@ require 'cgi'
 
 module Ore
 	class Server_Runner
+		DEFAULT_PORT = 8080
+
 		attr_accessor :server_instance, :interpreter, :port, :routes, :webrick_server, :server_thread
 
+		# interpteter:1424 as a result of the @start directive
+		# server_runner = Ore::Server_Runner.new server_instance, self, routes
+		# server_runner gets added to runtime.servers
 		def initialize server_instance, interpreter, routes = {}
 			@server_instance = server_instance
 			@interpreter     = interpreter
-			@port            = extract_port
 			@routes          = routes
-		end
-
-		def extract_port
-			port_value = server_instance[:port] || server_instance.declarations['port']
-			port_value.is_a?(Integer) ? port_value : 8080
+			@port            = Integer(server_instance.get(:port) || DEFAULT_PORT)
 		end
 
 		def match_route http_method, path_parts, routes
@@ -63,7 +63,7 @@ module Ore
 			headers_hash = request.header.to_h
 
 			### Print some useful stuff
-			req_info = "▓▒░ "
+			req_info = Ascii.dim "▓▒░ "
 			unless body_hash.empty?
 				req_info = req_info.prepend Ascii.green
 			end
@@ -78,15 +78,59 @@ module Ore
 			puts req_info
 			### end print
 
+			# This handles the dom.js onclick request, not user code
+			if path_string.start_with?("/onclick/")
+				object_id = path_parts.last.to_i
+				handler   = interpreter.runtime.onclick_handlers[object_id]
+				if handler
+					begin
+						# handler is a Func < Scope -> @expressions @static @arguments
+						# Push the proper scope chain (instance, type, and function scopes)
+						runtime = interpreter.runtime
+						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
+							type = handler.enclosing_scope.enclosing_scope
+							runtime.push_scope type.enclosing_scope if type.enclosing_scope
+							runtime.push_scope type
+						end
+						runtime.push_scope handler.enclosing_scope
+						runtime.push_scope handler
+						result = handler.expressions.map { |e| interpreter.interpret e }.last
+
+						# Pop scopes in reverse order
+						runtime.pop_scope # handler
+						runtime.pop_scope # enclosing_scope
+						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
+							type = handler.enclosing_scope.enclosing_scope
+							runtime.pop_scope # type
+							runtime.pop_scope if type.enclosing_scope
+						end
+						# todo: Do something with the result?
+					rescue => e
+						warn "\n[Ore Onclick Error] #{e.class}: #{e.message}"
+						warn e.backtrace.first(10).map { |line| "  #{line}" }.join("\n")
+						warn ""
+
+						plain_message   = e.message.gsub(/\e\[\d+(?:;\d+)*m/, '')
+						response.status = 500
+						response.body   = "Internal Server Error\n#{plain_message}"
+						return
+					end
+				else
+					puts "no handler???"
+				end
+			end
+
 			# Cookies! request.cookies gives us an array of WEBrick::Cookie
 			# note: The cookie is set below somewhere in a javascript snippet using the same key BROWSER_VIEW_SIZE. We read it here to then declare it in the global scope for Dom elements to use
 			if cookie = request.cookies.find { _1.name == BROWSER_VIEW_SIZE }
 				parts = cookie.value.split 'x'
 				size  = {
-					width:  parts[0].to_i,
-					height: parts[1].to_i
+					  width:  parts[0].to_i,
+					  height: parts[1].to_i
 				}
-				interpreter.runtime.stack.first.declare BROWSER_VIEW_SIZE, size
+				# This declares `browser_view_size` in the current scope, which should be the route handler?
+				# todo: A better way to store this information, and make it accessible at runtime. Some
+				interpreter.runtime.stack.last.declare BROWSER_VIEW_SIZE, size
 			end
 
 			route_function = match_route http_method, path_parts, routes
@@ -107,21 +151,13 @@ module Ore
 				interpreter.link_instance_to_type params_dict, 'Dictionary'
 				interpreter.link_instance_to_type headers_dict, 'Dictionary'
 
-				req.path              = path_string
-				req.method            = http_method
-				req.query             = query_dict
-				req.params            = params_dict
-				req.headers           = headers_dict
-				req.body              = body_dict
-				req.body.declarations = body_hash
-
-				# Update declarations
-				req.declarations['path']    = req.path
-				req.declarations['method']  = req.method
-				req.declarations['query']   = req.query
-				req.declarations['params']  = req.params
-				req.declarations['headers'] = req.headers
-				req.declarations['body']    = req.body
+				req.declarations['path']              = path_string
+				req.declarations['method']            = http_method
+				req.declarations['query']             = query_dict
+				req.declarations['params']            = params_dict
+				req.declarations['headers']           = headers_dict
+				req.declarations['body']              = body_dict
+				req.declarations['body'].declarations = body_hash
 
 				begin
 					res = Ore::Response.new response
@@ -131,43 +167,34 @@ module Ore
 					result = interpreter.interp_route_handler route_function, req, res, url_params, server_instance: @server_instance
 
 					# Apply response object's configuration to WEBrick response
-					response.status = res.declarations['status'] || res.status
-					headers_hash    = res.declarations['headers'] || res.headers
+					response.status = res.declarations['status']
+					response.body   = res.declarations['body']
+					headers_hash    = res.declarations['headers']
 					headers_hash.each { |k, v| response.header[k] = v }
-					response.body = res.declarations['body'] || res.body_content.to_s
-					# todo: append or prepend javascript that will capture the window size, set a cookie for it, then reload or just change url location so WEBrick can read the cookie for window size
-					# This window size to be available to all Dom elements as an alternate to media queries which I'm unable to reproduce yet.
-					# Inject JavaScript here - modify response.body
+					Time
+
+					# note: WEBrick (or the browser) automatically include html and head elements if the response does not
 					if response.body.to_s =~ /<html|<body|<head/i
-						# todo: Move this to a .js file and load it
-						window_size_js = <<~JSCODE
-						    <script>
-						    (function() {
-						        var size = window.innerWidth + 'x' + window.innerHeight;
-						        if (document.cookie.indexOf('#{BROWSER_VIEW_SIZE}=' + size) === -1) {
-						            document.cookie = '#{BROWSER_VIEW_SIZE}=' + size + '; path=/';
-									console.log('Set cookie for window size!!!', size);
-						            window.location = '';
-						        }
-						    })();
-						    </script>
-						JSCODE
+						response.body.prepend "<!DOCTYPE html>"
+
+						dom_js     = File.read 'src/runtime/dom.js'
+						script_tag = "<script>#{dom_js}</script>"
 
 						# Insert after <head> or <body> tag, or prepend
 						body_str = response.body.to_s
 						if body_str.include?('<head>')
-							response.body = body_str.sub('<head>', '<head>' + window_size_js)
+							response.body = body_str.sub('<head>', '<head>' + script_tag)
 						elsif body_str.include?('<body>')
-							response.body = body_str.sub('<body>', '<body>' + window_size_js)
+							response.body = body_str.sub('<body>', '<body>' + script_tag)
 						else
-							response.body = window_size_js + body_str
+							response.body = script_tag + body_str
 						end
 					end
 
 					result
 
-				rescue WEBrick::HTTPStatus::Status
-					raise # note: Must propagate the WEBrick status exceptions as this is how it handles redirects, and such,
+				rescue WEBrick::HTTPStatus::Status => e
+					raise e # note: Must propagate the WEBrick status exceptions as this is how it handles redirects, and such,
 
 				rescue => e
 					warn "\n[Ore Server Error] #{e.class}: #{e.message}"
@@ -189,6 +216,7 @@ module Ore
 					response.header['Content-Type'] = 'text/html; charset=utf-8'
 				end
 			else
+				puts "no matching route function"
 				# 404 Not Found
 				response.status = 404
 				response.body   = <<~HTML
@@ -205,9 +233,18 @@ module Ore
 		end
 
 		def start
-			@webrick_server = WEBrick::HTTPServer.new Port: port, Logger: WEBrick::Log.new("/dev/null"), AccessLog: []
+			@webrick_server = WEBrick::HTTPServer.new Port:      port,
+			                                          Logger:    WEBrick::Log.new("/dev/null"),
+			                                          AccessLog: [] # Disables
 
+			# This receives requests from dom.js
+			webrick_server.mount_proc '/onclick/' do |req, res|
+				puts Ascii.dim "▓▒░ #{'DOM'.rjust(7, ' ')} #{req.path}"
+			end
+
+			# This receives the rest of the requests
 			webrick_server.mount_proc '' do |req, res|
+				puts "url received received"
 				handle_request req, res, @routes
 			end
 
@@ -219,8 +256,17 @@ module Ore
 		end
 
 		def stop
-			webrick_server&.shutdown
+			webrick_server.shutdown if webrick_server
 			Thread.kill server_thread if server_thread
+		end
+
+		def prefixed_output output
+			req_info = Ascii.dim("▓▒░ ")
+			req_info << Ascii.dim(output.rjust(7, ' '))
+		end
+
+		def right_aligned output
+			output.rjust(7, ' ')
 		end
 	end
 end

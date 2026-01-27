@@ -2120,13 +2120,13 @@ class Interpreter_Test < Base_Test
 	end
 
 	def test_reading_files
-		out = Ore.interp "Inout.read_file_to_string('test/fixtures/hello_read.txt')"
+		out = Ore.interp "File_System.read_file_to_string('test/fixtures/hello_read.txt')"
 		assert_equal "Hello, Read!\n", out.value # note: There is a newline at the end of the file, so it has to be included here
 	end
 
 	def test_writing_files
-		Ore.interp "Inout.write_string_to_file('test/fixtures/hello_write.txt', 'Hello, Write!')"
-		out = Ore.interp "Inout.read_file_to_string('test/fixtures/hello_write.txt')"
+		Ore.interp "File_System.write_string_to_file('test/fixtures/hello_write.txt', 'Hello, Write!')"
+		out = Ore.interp "File_System.read_file_to_string('test/fixtures/hello_write.txt')"
 		assert_equal "Hello, Write!", out.value
 	end
 

@@ -58,15 +58,8 @@ module Ore
 		end
 
 		def load_standard_library
-			load_file STANDARD_LIBRARY_PATH
-		end
-
-		# Convenience method for loading files into this scope without a runtime
-		# Creates a temporary Context to handle file loading
-		def load_file filepath
 			temp_runtime = Ore::Runtime.new
-			temp_runtime.load_file_into_scope filepath, self
-			self
+			temp_runtime.load_file_into_scope STANDARD_LIBRARY_PATH, self
 		end
 
 		def inspect
@@ -90,7 +83,6 @@ module Ore
 			super name
 			@types               = Set[name]
 			@static_declarations = Set.new
-			@expressions         = [] # note: Fancy subclasses of this like Ore::Array don't have @expressions therefore fail in places I assume @expressions is an array with some elements. Therefore giving it a default value here.
 		end
 
 		def has? identifier
@@ -386,8 +378,8 @@ module Ore
 	class Server < Instance
 		attr_accessor :port, :routes
 
-		def initialize
-			super 'Server'
+		def initialize name = 'Server'
+			super name
 
 			@routes                 = {}
 			@declarations['port']   = nil
@@ -396,39 +388,24 @@ module Ore
 	end
 
 	class Request < Scope
-		attr_accessor :path, :method, :query, :params, :headers, :body
-
 		def initialize
 			super 'Request'
-			@path    = nil
-			@method  = nil
-			@query   = Ore::Dictionary.new
-			@params  = Ore::Dictionary.new
-			@headers = Ore::Dictionary.new
-			@body    = nil
-
-			@declarations['path']    = @path
-			@declarations['method']  = @method
-			@declarations['query']   = @query
-			@declarations['params']  = @params
-			@declarations['headers'] = @headers
-			@declarations['body']    = @body
+			@declarations['path']    = nil
+			@declarations['method']  = nil
+			@declarations['query']   = Ore::Dictionary.new
+			@declarations['params']  = Ore::Dictionary.new
+			@declarations['headers'] = Ore::Dictionary.new
+			@declarations['body']    = nil
 		end
 	end
 
 	class Response < Scope
-		attr_accessor :status, :headers, :body_content, :webrick_response
-
 		def initialize webrick_response
 			super 'Response'
-			@webrick_response = webrick_response
-			@status           = 200
-			@headers          = { 'Content-Type' => 'text/html; charset=utf-8' }
-			@body_content     = ''
-
-			@declarations['status']  = @status
-			@declarations['headers'] = @headers
-			@declarations['body']    = @body_content
+			@declarations['webrick_response'] = webrick_response
+			@declarations['status']           = 200
+			@declarations['headers']          = {}
+			@declarations['body']             = ''
 		end
 
 		def proxy_redirect to
@@ -535,14 +512,14 @@ module Ore
 		end
 	end
 
-	class Inout < Instance # I don't want to name it File because ::File
+	class File_System < Instance
 		# todo: Improve read and write, these are just naive implementations to make IO possible.
 		def proxy_read_file_to_string filepath
 			Ore::String.new File.read filepath
 		end
 
 		def proxy_write_string_to_file filepath, string
-			File.write filepath, string
+			::File.write filepath, string
 		end
 	end
 end

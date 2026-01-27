@@ -5,6 +5,9 @@ require_relative 'shared/super_proxies'
 require_relative 'shared/stage'
 require_relative 'shared/pipeline'
 
+require_relative 'systems/server_runner'
+require_relative 'systems/dom_renderer'
+
 # Compile-time (source to AST)
 require_relative 'compiler/lexeme'
 require_relative 'compiler/expressions'
@@ -17,8 +20,6 @@ require_relative 'compiler/type_checker'
 require_relative 'runtime/errors'
 require_relative 'runtime/scopes'
 require_relative 'runtime/runtime'
-require_relative 'runtime/server_runner'
-require_relative 'runtime/dom_renderer'
 require_relative 'runtime/interpreter'
 
 module Ore

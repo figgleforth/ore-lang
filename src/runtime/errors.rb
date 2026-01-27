@@ -60,7 +60,7 @@ module Ore
 	class Invalid_Http_Directive_Handler < Error
 	end
 
-	class Invalid_Start_Diretive_Argument < Error
+	class Invalid_Start_Directive_Argument < Error
 	end
 
 	class Interpret_Expr_Not_Implemented < Error

@@ -40,7 +40,7 @@ input_to_array_of_sides { input;
 }
 
 total = 0
-input = Inout.read('examples/aoc/2015/02/input.txt')
+input = File_System.read('examples/aoc/2015/02/input.txt')
 for input.split("\n")
 	sides = input_to_array_of_sides(it)
 	total += total_wrapping_paper_needed(sides)

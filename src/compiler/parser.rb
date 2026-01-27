@@ -225,7 +225,7 @@ module Ore
 				end
 			end
 
-			func.lexeme = func.name
+			func.lexeme = func.name&.lexeme
 			eat '{'
 			reduce_newlines
 
@@ -423,10 +423,9 @@ module Ore
 			end
 
 			missing_params = param_names - handler_params
-			unless missing_params.empty?
-				# todo: Add this error to src/runtime/errors.rb
-				warn "Route parameters #{missing_params.inspect} not found in handler parameters. Handler #{expr} params: #{handler_params}"
-			end
+			# todo: Is this a case that needs to be handled?
+			# unless missing_params.empty?
+			# end
 
 			route             = Ore::Route_Expr.new
 			route.http_method = Ore::Identifier_Expr.new.tap do |expr|

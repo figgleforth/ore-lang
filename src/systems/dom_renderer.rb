@@ -19,7 +19,8 @@ module Ore
 
 		def html_attrs
 			@html_attrs ||= dom.declarations.reject do |key, _|
-				key == 'html_element' # This identifier is just used to determine the element to render, so it shouldn't be included as an attribute of the final HTML string.
+				# This identifier is just used to determine the element to render, so it shouldn't be included as an attribute of the final HTML string.
+				key == 'html_element' || key == 'html_onclick'
 			end.select do |key, v|
 				key.to_s.start_with? HTML_PREFIX
 			end.map do |key, value|
@@ -27,6 +28,10 @@ module Ore
 				key = key.gsub '_', '-'
 				[key, value]
 			end.to_h
+		end
+
+		def onclick_expr
+			dom.declarations['html_onclick']
 		end
 
 		def css_attrs
@@ -62,6 +67,10 @@ module Ore
 					html << " style=\""
 					html << css_attrs_string
 					html << "\""
+				end
+
+				if onclick_expr
+					html << " data-ore-onclick=\"#{onclick_expr.object_id}\""
 				end
 
 				html << ">"

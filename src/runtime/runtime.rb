@@ -1,13 +1,27 @@
 module Ore
 	class Runtime
-		attr_accessor :stack, :routes, :servers, :loaded_files, :source_files
+		attr_accessor :stack, :routes, :servers, :onclick_handlers, :loaded_files, :source_files
 
 		def initialize global_scope = nil
-			@stack        = [global_scope || Ore::Global.new]
-			@servers      = []
-			@routes       = {} # {route: Ore::Route}
-			@loaded_files = {} # {filename: Ore::Expression}
-			@source_files = {} # {filepath: String} for error reporting
+			@stack            = [global_scope || Ore::Global.new]
+			@servers          = []
+			@routes           = {} # {route: Ore::Route}
+			@loaded_files     = {} # {filename: Ore::Expression}
+			@source_files     = {} # {filepath: String} for error reporting
+			@onclick_handlers = {} # {handler_hash?: Ore::Func}
+		end
+
+		def inspect
+			{
+				# routes:  routes,
+				# servers: servers,
+				# onclick_handlers: onclick_handlers
+				stack: stack
+			}
+		end
+
+		def add_onclick_handler handler
+			onclick_handlers[handler.object_id] = handler
 		end
 
 		def push_scope scope
