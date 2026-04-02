@@ -11,7 +11,7 @@ Ore is an educational programming language for web development, implemented in R
 - Dot notation for accessing nested structures and scopes (., ..)
 - First-class functions and classes
 - Built-in web server support with routing
-- When writing .ore source, use backtick (#) character for comments, with a space before the content
+- When writing .ore source, use `#` for single-line comments (with a space after), and triple backtick ` ``` ` fences for multi-line/block comments
 
 ## Common Commands
 
@@ -164,6 +164,25 @@ Person.increment()   # Call static method on type => 2
 - Instances are linked to their types via `instance.enclosing_scope = type`
 - Static functions and variables are declared on the Type scope
 
+## Class Composition Operators
+
+Ore uses composition operators instead of inheritance. Applied as `Class | Other { body }`:
+
+- `|` **Union** - merge all declarations; left side wins conflicts
+- `&` **Intersection** - keep only declarations shared by both sides
+- `~` **Difference** - remove right side's declarations from left side
+- `^` **Symmetric Difference** - keep only unique declarations (discard shared ones)
+
+Multiple operators can be chained: `Admin | Read_Permissions | Write_Permissions { }`.
+
+Built-in types like `Server`, `Record`, and `Dom` are composed this way:
+
+```ore
+Web_App | Server { get:// {; "Hello" } }
+Post | Record { ./database = ../db; table_name = 'posts' }
+Layout | Dom { render {; Html([Body("Hello")]) } }
+```
+
 ## Identifier Naming Conventions
 
 The language enforces naming conventions through the helper functions:
@@ -186,6 +205,22 @@ A capitalized identifier followed by a `{}` grouped block
 
 ```ore
 <Identifier> { <body> }
+```
+
+The `new` method is the constructor and is called when instantiating a class:
+
+```ore
+Point {
+    x,
+    y,
+
+    new { x, y;
+        .x = x
+        .y = y
+    }
+}
+
+p = Point(3, 4)  # Calls new
 ```
 
 ## Unpack Feature
@@ -415,6 +450,42 @@ end
 - **stop** - Exit the loop immediately (like `break`)
 - Works with `for`, `while`, and `until` loops
 
+### While and Until Loops
+
+```ore
+while x < 4
+    x += 1
+end
+
+until x >= 23
+    x += 2
+end
+```
+
+Both support `elwhile`/`else` chaining (like `elif` for loops):
+
+```ore
+while x < 4
+    x += 1
+elwhile y > -8
+    y -= 1
+else
+    z = 1
+end
+```
+
+### Unless / Control Flows as Expressions
+
+`unless condition` is equivalent to `if !condition`. All control flows (`if`, `unless`, `while`, `until`) are expressions and return values:
+
+```ore
+x = unless condition
+    4
+else
+    -4
+end
+```
+
 ### Return Statement
 
 The `return` keyword exits a function and returns a value. It properly propagates even when used inside loops:
@@ -597,6 +668,49 @@ post://login {;
     end
 }
 ```
+
+## HTML Rendering
+
+Ore supports HTML rendering via the built-in `Dom` type (load `ore/html.ore`). Any class composing with `Dom` that defines a `render` method will auto-render to HTML when returned from a server route.
+
+```ore
+@use 'ore/html.ore'
+
+Layout | Dom {
+    title,
+
+    new { title = 'My Page';
+        .title = title
+    }
+
+    render {;
+        Html([
+            Head(Title(title)),
+            Body(H1("Hello!"))
+        ])
+    }
+}
+```
+
+**HTML and CSS attributes** use `html_` and `css_` prefixes on declarations:
+
+```ore
+Styled_Div | Dom {
+    html_element = 'p'
+    html_class = 'my_class'
+    html_id = 'my_id'
+    css_background_color = 'black'
+    css_color = 'white'
+}
+# => <p class='my_class' id='my_id' style='background-color:black;color:white;'></p>
+```
+
+**Predefined elements** in `ore/html.ore`: `Html`, `Head`, `Body`, `Title`, `H1`–`H6`, `P`, `Span`, `A`, `Div`, `Form`, `Input`, `Button`, `Ul`, `Ol`, `Li`, `Table`, `Tr`, `Td`, `Th`, and more.
+
+- Routes returning a `Dom` instance automatically render to HTML string
+- HTML rendering only works when `render{;}` is called by a Server instance
+- `html_element` sets the tag name (default `'div'`)
+- Fence blocks starting with `html\n` are treated as raw HTML tokens by the lexer
 
 ## File Loading
 
