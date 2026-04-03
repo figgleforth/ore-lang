@@ -1,5 +1,11 @@
 module Ore
-	class Type_Checker < Stage
+	class Type_Checker
+		attr_accessor :input
+
+		def initialize input
+			@input = input
+		end
+
 		def output
 			errors = [].tap do |array|
 				input.each do |expr|

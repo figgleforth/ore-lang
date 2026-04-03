@@ -39,9 +39,8 @@ class E2E_Server_Test < Minitest::Test
 		    app = Web_App()
 		ORE
 
-		# Start server in background
-		interpreter     = Ore::Interpreter.new Ore.parse(code)
-		server_instance = interpreter.output
+		interpreter     = Ore::Interpreter.new
+		server_instance = interpreter.run code
 
 		routes         = interpreter.collect_routes_from_instance server_instance
 		@server_runner = Ore::Server_Runner.new server_instance, interpreter, routes
@@ -84,8 +83,8 @@ class E2E_Server_Test < Minitest::Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new Ore.parse(code)
-		server_instance = interpreter.output
+		interpreter     = Ore::Interpreter.new
+		server_instance = interpreter.run code
 
 		routes         = interpreter.collect_routes_from_instance server_instance
 		@server_runner = Ore::Server_Runner.new server_instance, interpreter, routes
@@ -117,8 +116,8 @@ class E2E_Server_Test < Minitest::Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new Ore.parse(code)
-		server_instance = interpreter.output
+		interpreter     = Ore::Interpreter.new
+		server_instance = interpreter.run code
 
 		routes         = interpreter.collect_routes_from_instance server_instance
 		@server_runner = Ore::Server_Runner.new server_instance, interpreter, routes
@@ -160,14 +159,9 @@ class E2E_Server_Test < Minitest::Test
 		    b = Server_B(#{port_b})
 		ORE
 
-		interpreter = Ore::Interpreter.new Ore.parse(code)
-		interpreter.output
+		interpreter = Ore::Interpreter.new
+		interpreter.run code
 
-		# Collect routes for each server
-		server_a_type = interpreter.runtime.stack.first['Server_A']
-		server_b_type = interpreter.runtime.stack.first['Server_B']
-
-		# Get server instances from interpreter runtime
 		a_instance = interpreter.runtime.stack.first['a']
 		b_instance = interpreter.runtime.stack.first['b']
 

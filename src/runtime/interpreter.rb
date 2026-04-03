@@ -1,15 +1,26 @@
 module Ore
-	class Interpreter < Stage
-		attr_accessor :i, :runtime
+	class Interpreter
+		attr_accessor :input, :runtime, :lexer, :parser, :load_standard_library
 
-		def initialize input = [], runtime = nil
-			super input
-			@runtime = runtime
+		def initialize runtime: nil
+			@runtime               = runtime || Runtime.new
+			@load_standard_library = true
+			@input                 = []
+			@lexer                 = Lexer.new
+			@parser                = Parser.new
+		end
+
+		def run source_code
+			if runtime.stack.empty?
+				runtime.stack << (load_standard_library ? Global.with_standard_library : Global.new)
+			end
+			@lexer.input  = source_code
+			@parser.input = @lexer.output
+			@input        = @parser.output
+			output
 		end
 
 		def output & block
-			@runtime ||= Ore::Runtime.new(Ore::Global.with_standard_library)
-
 			result = input.each.inject nil do |result, expr|
 				interpret expr
 			end
@@ -19,6 +30,32 @@ module Ore
 			end
 
 			return result
+		end
+
+		def load_file_into_scope filepath, into_scope
+			resolved_path = if filepath.start_with? 'ore/'
+				File.join ROOT_PATH, filepath
+			else
+				File.expand_path filepath
+			end
+
+			runtime.push_scope into_scope
+
+			unless runtime.loaded_files[resolved_path]
+				code = File.read resolved_path
+				runtime.register_source resolved_path, code
+
+				lexemes                              = Lexer.new(code).output
+				expressions                          = Parser.new(lexemes).output
+				runtime.loaded_files[resolved_path]  = expressions
+			end
+
+			temp       = Interpreter.new runtime: runtime
+			temp.input = runtime.loaded_files[resolved_path]
+			result     = temp.output
+
+			runtime.pop_scope
+			result
 		end
 
 		def scope_for_identifier expr
@@ -379,7 +416,7 @@ module Ore
 			if expr.right.is_a?(Ore::Directive_Expr) && expr.right.name.value == Ore::IMPORT_FILE_DIRECTIVE
 				filepath  = interpret expr.right.expression
 				new_scope = Ore::Scope.new expr.left.value
-				runtime.load_file_into_scope filepath, new_scope
+				load_file_into_scope filepath, new_scope
 				right_value = new_scope
 			else
 				right_value = interpret expr.right
@@ -1454,7 +1491,7 @@ module Ore
 			when Ore::IMPORT_FILE_DIRECTIVE
 				# Standalone load is interpreted into current scope by passing the scope into runtime#load_file
 				filepath = interpret expr.expression
-				runtime.load_file_into_scope filepath, runtime.stack.last
+				load_file_into_scope filepath, runtime.stack.last
 				# note: #load_file_into_scope returns the output but it's ignored. Assigning the value of a @use directive executres code in #interp_infix_expr
 			else
 				# todo: Allow builtins to be extended by the user. Requirements would be:

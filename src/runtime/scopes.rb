@@ -58,8 +58,9 @@ module Ore
 		end
 
 		def load_standard_library
-			temp_runtime = Ore::Runtime.new
-			temp_runtime.load_file_into_scope STANDARD_LIBRARY_PATH, self
+			temp                       = Ore::Interpreter.new
+			temp.load_standard_library = false
+			temp.load_file_into_scope STANDARD_LIBRARY_PATH, self
 		end
 
 		def inspect

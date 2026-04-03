@@ -91,7 +91,7 @@ Used by both compiler and runtime:
 
 ### Standard Library
 
-- `ore/preload.ore` - Auto-loaded into global scope when `with_std: true` (default)
+- `ore/preload.ore` - Auto-loaded into global scope when `load_standard_library: true` (default)
 - Standard library path defined in `Ore::STANDARD_LIBRARY_PATH`
 
 ## Scope System

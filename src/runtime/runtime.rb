@@ -4,8 +4,8 @@ module Ore
 
 		attr_accessor :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :cd_scopes
 
-		def initialize global_scope = nil
-			@stack            = [global_scope || Ore::Global.new]
+		def initialize
+			@stack            = []
 			@servers          = []
 			@routes           = {} # {route: Ore::Route}
 			@loaded_files     = {} # {filename: Ore::Expression}
@@ -17,10 +17,10 @@ module Ore
 
 		def inspect
 			{
-				  # routes:  routes,
-				  # servers: servers,
-				  # onclick_handlers: onclick_handlers
-				  stack: stack
+				# routes:  routes,
+				# servers: servers,
+				# onclick_handlers: onclick_handlers
+				stack: stack
 			}
 		end
 
@@ -31,14 +31,13 @@ module Ore
 		end
 
 		def add_input_element instance
-			key                  = instance.hash
-			input_elements[key]  = instance
+			key                 = instance.hash
+			input_elements[key] = instance
 			key
 		end
 
 		def push_scope scope
 			scope ||= stack.last
-
 			stack << scope
 		end
 
@@ -51,7 +50,6 @@ module Ore
 		end
 
 		def push_then_pop scope
-			# todo: Proper error
 			raise "Attempting to push `nil` value as scope" if scope == nil
 
 			push_scope scope
@@ -64,32 +62,6 @@ module Ore
 		def register_source filepath, source_code
 			resolved                = filepath ? File.expand_path(filepath) : '<inline>'
 			@source_files[resolved] = source_code.lines.map(&:chomp)
-		end
-
-		def load_file_into_scope filepath, into_scope
-			resolved_path = if filepath.start_with? 'ore/'
-				File.join ROOT_PATH, filepath
-			else
-				File.expand_path filepath
-			end
-			push_scope into_scope
-
-			unless loaded_files[resolved_path]
-				code = File.read resolved_path
-				register_source resolved_path, code
-
-				lexemes                     = Ore::Lexer.new(code).output
-				expressions                 = Ore::Parser.new(lexemes).output
-				loaded_files[resolved_path] = expressions
-			end
-
-			# Always interpret into the target scope (allows reuse in different scopes)
-			expressions      = loaded_files[resolved_path]
-			temp_interpreter = Ore::Interpreter.new expressions, self
-			output           = temp_interpreter.output
-
-			pop_scope
-			output
 		end
 	end
 end
