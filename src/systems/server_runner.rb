@@ -85,14 +85,12 @@ module Ore
 				handler   = interpreter.runtime.onclick_handlers[object_id]
 				if handler
 					begin
-						runtime = interpreter.runtime
-
 						# Update input element values from the request body
 						if request.body && !request.body.empty?
 							json_body = JSON.parse request.body rescue {}
 							inputs    = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
-								input_instance = runtime.input_elements[element_id.to_i]
+								input_instance = interpreter.runtime.input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
 							end
 						end
@@ -100,20 +98,20 @@ module Ore
 						# Push the proper scope chain (instance, type, and function scopes)
 						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
 							type = handler.enclosing_scope.enclosing_scope
-							runtime.push_scope type.enclosing_scope if type.enclosing_scope
-							runtime.push_scope type
+							interpreter.push_scope type.enclosing_scope if type.enclosing_scope
+							interpreter.push_scope type
 						end
-						runtime.push_scope handler.enclosing_scope
-						runtime.push_scope handler
+						interpreter.push_scope handler.enclosing_scope
+						interpreter.push_scope handler
 						result = handler.expressions.map { |e| interpreter.interpret e }.last
 
 						# Pop scopes in reverse order
-						runtime.pop_scope # handler
-						runtime.pop_scope # enclosing_scope
+						interpreter.pop_scope # handler
+						interpreter.pop_scope # enclosing_scope
 						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
 							type = handler.enclosing_scope.enclosing_scope
-							runtime.pop_scope # type
-							runtime.pop_scope if type.enclosing_scope
+							interpreter.pop_scope # type
+							interpreter.pop_scope if type.enclosing_scope
 						end
 
 						# Do something with the result

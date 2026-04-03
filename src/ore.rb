@@ -36,7 +36,7 @@ module Ore
 		source_code                       = File.read filepath
 		interpreter                       = Interpreter.new
 		interpreter.load_standard_library = load_standard_library
-		interpreter.runtime.register_source filepath, source_code
+		interpreter.register_source filepath, source_code
 		interpreter.run source_code
 	end
 
@@ -67,7 +67,7 @@ module Ore
 				code                              = File.read filepath
 				interpreter                       = Interpreter.new
 				interpreter.load_standard_library = load_standard_library
-				interpreter.runtime.register_source filepath, code
+				interpreter.register_source filepath, code
 				result = interpreter.run code
 
 				if interpreter.runtime.servers.any?

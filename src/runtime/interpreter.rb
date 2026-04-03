@@ -39,11 +39,11 @@ module Ore
 				File.expand_path filepath
 			end
 
-			runtime.push_scope into_scope
+			push_scope into_scope
 
 			unless runtime.loaded_files[resolved_path]
 				code = File.read resolved_path
-				runtime.register_source resolved_path, code
+				register_source resolved_path, code
 
 				lexemes                              = Lexer.new(code).output
 				expressions                          = Parser.new(lexemes).output
@@ -54,8 +54,45 @@ module Ore
 			temp.input = runtime.loaded_files[resolved_path]
 			result     = temp.output
 
-			runtime.pop_scope
+			pop_scope
 			result
+		end
+
+		def push_scope scope
+			scope ||= runtime.stack.last
+			runtime.stack << scope
+		end
+
+		def pop_scope
+			if runtime.stack.length == 1
+				runtime.stack.last
+			else
+				runtime.stack.pop
+			end
+		end
+
+		def push_then_pop scope
+			raise "Attempting to push `nil` value as scope" if scope == nil
+			push_scope scope
+			yield scope if block_given?
+			pop_scope
+		end
+
+		def register_source filepath, source_code
+			resolved                       = filepath ? File.expand_path(filepath) : '<inline>'
+			runtime.source_files[resolved] = source_code.lines.map(&:chomp)
+		end
+
+		def add_onclick_handler handler
+			key                           = handler.hash
+			runtime.onclick_handlers[key] = handler
+			key
+		end
+
+		def add_input_element instance
+			key                          = instance.hash
+			runtime.input_elements[key]  = instance
+			key
 		end
 
 		def scope_for_identifier expr
@@ -203,11 +240,11 @@ module Ore
 			renderer = Ore::Dom_Renderer.new dom_instance, inner_html
 
 			if renderer.onclick_expr
-				runtime.add_onclick_handler renderer.onclick_expr
+				add_onclick_handler renderer.onclick_expr
 			end
 
 			if renderer.is_input_element?
-				runtime.add_input_element dom_instance
+				add_input_element dom_instance
 			end
 
 			renderer.to_html_string
@@ -480,9 +517,9 @@ module Ore
 
 				check_dot_access_permissions receiver, expr.right.value, expr
 
-				runtime.push_scope receiver
+				push_scope receiver
 				result = interpret expr.right
-				runtime.pop_scope
+				pop_scope
 				result
 			end
 		end
@@ -496,11 +533,11 @@ module Ore
 			instance             = Ore::Instance.new receiver.name # :generalize_me
 			instance.expressions = receiver.expressions
 
-			runtime.push_scope instance
+			push_scope instance
 			instance.expressions.each do |it|
 				interpret it
 			end
-			runtime.pop_scope
+			pop_scope
 
 			instance
 		end
@@ -546,9 +583,9 @@ module Ore
 			end
 
 			# todo: Handle the case when dictionary keys shadow one of the builtin dictionary functions. Ideally check the dict scope first, then dict.dict, but manually check the scope instead of using #interpret because #interpret will look up the stack so the identifier may be found and evaluated despite not existing in dictionary.dict or dictionary the built-in.
-			runtime.push_scope dict
+			push_scope dict
 			result = interpret expr.right
-			runtime.pop_scope
+			pop_scope
 
 			result
 		end
@@ -561,9 +598,9 @@ module Ore
 
 			check_dot_access_permissions scope, expr.right.value, expr
 
-			runtime.push_scope scope
+			push_scope scope
 			result = interpret expr.right
-			runtime.pop_scope
+			pop_scope
 			result
 		end
 
@@ -571,10 +608,10 @@ module Ore
 			collection.each do |it|
 				each_scope                 = Ore::Scope.new 'each{;}'
 				each_scope.enclosing_scope = runtime.stack.last
-				runtime.push_scope each_scope
+				push_scope each_scope
 				each_scope.declare 'it', it
 				func_expr.expressions.each { |e| interpret e }
-				runtime.pop_scope
+				pop_scope
 			end
 		end
 
@@ -786,7 +823,7 @@ module Ore
 			# todo: Make @types a set
 			type.types = type.types.uniq
 
-			runtime.push_then_pop type do |scope|
+			push_then_pop type do |scope|
 				expr.expressions.each do |expr|
 					interpret expr
 				end
@@ -850,8 +887,8 @@ module Ore
 			# note: There was a bug here where I wasn't popping the instance after interpreting the type's expressions. That caused the #new function below (func_new) to not properly interpret arguments passed to it.
 			# note: We push type.enclosing_scope first (when present) so sibling types declared in the same scope can be found during instantiation.
 			interpret_instance_body = -> do
-				runtime.push_then_pop type do
-					runtime.push_then_pop instance do |scope|
+				push_then_pop type do
+					push_then_pop instance do |scope|
 						type.expressions.each do |expr|
 							# Skip static declarations - they were already executed during type definition and shouldn't be re-executed for each instance
 							if expr.is_a?(Ore::Infix_Expr) && expr.operator&.value == '=' &&
@@ -871,7 +908,7 @@ module Ore
 			end
 
 			if type.enclosing_scope
-				runtime.push_then_pop type.enclosing_scope do
+				push_then_pop type.enclosing_scope do
 					interpret_instance_body.call
 				end
 			else
@@ -937,11 +974,11 @@ module Ore
 			# Also push the type's enclosing_scope so sibling types can be found
 			if func.enclosing_scope.is_a?(Ore::Instance) && func.enclosing_scope.enclosing_scope
 				type = func.enclosing_scope.enclosing_scope
-				runtime.push_scope type.enclosing_scope if type.enclosing_scope # Push the Type's enclosing scope
-				runtime.push_scope type # Push the Type
+				push_scope type.enclosing_scope if type.enclosing_scope # Push the Type's enclosing scope
+				push_scope type # Push the Type
 			end
-			runtime.push_scope func.enclosing_scope
-			runtime.push_scope func
+			push_scope func.enclosing_scope
+			push_scope func
 
 			params.each_with_index do |param, i|
 				value = if i < arg_values.length
@@ -972,13 +1009,13 @@ module Ore
 				break if result.is_a? Ore::Return
 			end
 
-			Ore.assert runtime.pop_scope == func
-			Ore.assert runtime.pop_scope == func.enclosing_scope
+			Ore.assert pop_scope == func
+			Ore.assert pop_scope == func.enclosing_scope
 
 			if func.enclosing_scope.is_a?(Ore::Instance) && func.enclosing_scope.enclosing_scope
 				type = func.enclosing_scope.enclosing_scope
-				Ore.assert runtime.pop_scope == type
-				runtime.pop_scope if type.enclosing_scope # Pop the Type's enclosing scope
+				Ore.assert pop_scope == type
+				pop_scope if type.enclosing_scope # Pop the Type's enclosing scope
 			end
 
 			result.is_a?(Ore::Return) ? result.value : result
@@ -995,9 +1032,9 @@ module Ore
 			params  = handler.expressions.select { |e| e.is_a? Ore::Param_Expr }
 
 			call_scope = Ore::Scope.new "#{handler.name || 'anonymous'}_route"
-			runtime.push_scope handler.enclosing_scope
-			runtime.push_scope server_instance if server_instance
-			runtime.push_scope call_scope
+			push_scope handler.enclosing_scope
+			push_scope server_instance if server_instance
+			push_scope call_scope
 
 			# Make request and response available without explicit declaration
 			call_scope.declare 'request', req
@@ -1060,15 +1097,15 @@ module Ore
 			end
 
 			# Clean up scopes in reverse order
-			popped_call = runtime.pop_scope
+			popped_call = pop_scope
 			Ore.assert popped_call == call_scope
 
 			if server_instance
-				popped_instance = runtime.pop_scope
+				popped_instance = pop_scope
 				Ore.assert popped_instance == server_instance
 			end
 
-			popped_enclosing = runtime.pop_scope
+			popped_enclosing = pop_scope
 			Ore.assert popped_enclosing == handler.enclosing_scope
 
 			result
@@ -1218,7 +1255,7 @@ module Ore
 			loop_type = for_loop_expr.type&.value || 'each' # one of Ore::FOR_VERBS
 			result    = nil
 
-			runtime.push_then_pop Scope.new('for_loop') do |scope|
+			push_then_pop Scope.new('for_loop') do |scope|
 				values = case collection
 				when Ore::Range
 					collection
@@ -1314,7 +1351,7 @@ module Ore
 				end
 
 				result     = stop_value if stop_value.is_a? Ore::Return
-			end # of runtime.push_then_pop
+			end # of push_then_pop
 
 			result
 		end
@@ -1481,10 +1518,10 @@ module Ore
 			when 'cd' # This is potentially destructive, you have write access to the scope
 				target = interpret expr.expression
 				if expr.expression.value == '..'
-					popped = runtime.pop_scope
+					popped = pop_scope
 					runtime.cd_scopes.delete popped
 				elsif target
-					runtime.push_scope target
+					push_scope target
 					runtime.cd_scopes.add target
 				end
 
