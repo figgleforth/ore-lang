@@ -51,18 +51,6 @@ module Ore
 			@declarations.delete(key.to_s)
 		end
 
-		def self.with_standard_library
-			global = new
-			global.load_standard_library
-			global
-		end
-
-		def load_standard_library
-			temp                       = Ore::Interpreter.new
-			temp.load_standard_library = false
-			temp.load_file_into_scope STANDARD_LIBRARY_PATH, self
-		end
-
 		def inspect
 			filtered = instance_variables.reject { |v| v == :@enclosing_scope }
 			vars     = filtered.map { |v| "#{v}=#{instance_variable_get(v).inspect}" }
@@ -74,7 +62,20 @@ module Ore
 		end
 	end
 
-	class Global < Scope
+	class Runtime < Scope
+		attr_accessor :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :cd_scopes
+
+		def initialize
+			super 'global'
+			@stack            = []
+			@servers          = []
+			@routes           = {} # {route: Ore::Route}
+			@loaded_files     = {} # {filename: Ore::Expression}
+			@source_files     = {} # {filepath: String} for error reporting
+			@onclick_handlers = {} # {handler_hash: Ore::Func}
+			@input_elements   = {} # {element_hash: Ore::Instance} for inputs/textareas
+			@cd_scopes        = Set.new # Scopes pushed via @cd directive
+		end
 	end
 
 	class Type < Scope

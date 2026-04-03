@@ -12,7 +12,12 @@ module Ore
 
 		def run source_code
 			if runtime.stack.empty?
-				runtime.stack << (load_standard_library ? Global.with_standard_library : Global.new)
+				if load_standard_library
+					temp                       = Interpreter.new runtime: Runtime.new
+					temp.load_standard_library = false
+					temp.load_file_into_scope STANDARD_LIBRARY_PATH, runtime
+				end
+				runtime.stack << runtime
 			end
 			@lexer.input  = source_code
 			@parser.input = @lexer.output

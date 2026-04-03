@@ -13,9 +13,7 @@ This [`src`](/src) folder contains the implementation of Ore in Ruby. The codeba
 
 - [`interpreter.rb`](runtime/interpreter.rb) - Executes the AST
 - [`errors.rb`](runtime/errors.rb) - Runtime error definitions
-- [`scope.rb`](runtime/scopes.rb) - Scoping and variable management
 - [`scopes.rb`](runtime/scopes.rb) - Runtime scope definitions
-- [`runtime.rb`](runtime/runtime.rb) - Execution state management
 
 **Orchestration**
 
