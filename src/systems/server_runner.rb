@@ -237,7 +237,6 @@ module Ore
 					response.header['Content-Type'] = 'text/html; charset=utf-8'
 				end
 			else
-				puts "no matching route function"
 				# 404 Not Found
 				response.status = 404
 				response.body   = <<~HTML
