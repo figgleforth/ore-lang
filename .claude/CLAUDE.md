@@ -35,13 +35,13 @@ bundle exec rake
 bin/ore <file.ore>
 
 # Debug/inspect compilation stages
-bin/ore lex "4 + 8"              # Show lexer tokens
-bin/ore parse "4 + 8"            # Show AST
-bin/ore interp "4 + 8"           # Execute code
+bin/ore lex "4 + 8"              # Show lexer tokens for code string
+bin/ore parse "4 + 8"            # Show AST for code string
+bin/ore interp "4 + 8"           # Execute code string
 
-bin/ore lex -f <file.ore>        # Tokenize file
-bin/ore parse -f <file.ore>      # Parse file to AST
-bin/ore interp -f <file.ore>     # Execute file
+bin/ore lexf <file.ore>          # Tokenize file
+bin/ore parsef <file.ore>        # Parse file to AST
+bin/ore interpf <file.ore>       # Execute file
 ```
 
 ### Setup
@@ -53,7 +53,9 @@ bundle install
 
 ## Architecture
 
-The codebase follows a three-phase pipeline: **Lexer → Parser → Interpreter**
+Three phases: **Lexer → Parser → Interpreter**
+
+`Interpreter` is the main entry point. It owns a `Lexer`, `Parser`, and `Runtime`, and exposes `run(source_code)` which drives all three phases. `Lexer` and `Parser` are plain transformation classes you can also call directly.
 
 ### Compile-time (src/compiler/)
 
@@ -68,37 +70,40 @@ Source code is tokenized and parsed into an Abstract Syntax Tree (AST):
 
 The AST is executed to produce output:
 
-- `interpreter.rb` - Traverses and executes the AST, is stateless
-- `scope.rb` - Manages variable scoping and declarations (Global, Type, Instance, Func, Route, Return scopes)
-- `runtime.rb` - Tracks execution state (declarations, routes, servers, loaded files)
-- `scopes.rb` - Runtime type definitions (includes Request, Response, Server classes)
+- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, `@runtime`; `run(source)` is the entry point; also handles file loading via `load_file_into_scope`
+- `scopes.rb` - All scope types and built-in types:
+	- `Runtime < Scope` - The global scope and execution state (stack, routes, servers, loaded files, etc.)
+	- `Type`, `Instance`, `Func`, `Route`, `Return` - Scope hierarchy
+	- `String`, `Array`, `Number`, `Dictionary`, `Server`, `Record`, `Database`, etc. - Built-in types
 - `errors.rb` - Runtime error definitions
-- `server_runner.rb` - HTTP server implementation using WEBrick (handles routing, URL params, query strings)
+
+### Systems (src/systems/)
+
+- `server_runner.rb` - HTTP server implementation using WEBrick (routing, URL params, query strings)
+- `dom_renderer.rb` - HTML rendering for `Dom` composition
 
 ### Shared (src/shared/)
-
-Used by both compiler and runtime:
 
 - `constants.rb` - Language constants, operators, precedence table, reserved words
 - `helpers.rb` - Utility functions for identifier classification (constant_identifier?, type_identifier?, member_identifier?)
 
 ### Entry Point
 
-- `src/ore.rb` - Main module that ties everything together and provides convenience methods:
+- `src/ore.rb` - Requires all components; exposes convenience methods:
 	- `Ore.lex(source)` / `Ore.lex_file(filepath)` - Tokenize only
 	- `Ore.parse(source)` / `Ore.parse_file(filepath)` - Parse to AST
 	- `Ore.interp(source)` / `Ore.interp_file(filepath)` - Full execution
 
 ### Standard Library
 
-- `ore/preload.ore` - Auto-loaded into global scope when `load_standard_library: true` (default)
+- `ore/preload.ore` - Auto-loaded into the Runtime (global scope) when `load_standard_library` is `true` (default)
 - Standard library path defined in `Ore::STANDARD_LIBRARY_PATH`
 
 ## Scope System
 
-Ore uses a sophisticated scope hierarchy:
+Ore uses a scope hierarchy, all defined in `src/runtime/scopes.rb`:
 
-- **Global** - Top-level scope, can load standard library via `Global.with_standard_library`
+- **Runtime** - The global scope; IS the bottom of the scope stack; holds execution state (routes, servers, loaded files, etc.); standard library declarations live here
 - **Type** - Class definitions (tracks `@types`, `@expressions`)
 - **Instance** - Class instances
 - **Func** - Function scopes (tracks `@expressions`)
