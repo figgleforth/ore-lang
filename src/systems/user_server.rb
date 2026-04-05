@@ -95,24 +95,10 @@ module Ore
 							end
 						end
 
-						# Push the proper scope chain (instance, type, and function scopes)
-						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
-							type = handler.enclosing_scope.enclosing_scope
-							interpreter.push_scope type.enclosing_scope if type.enclosing_scope
-							interpreter.push_scope type
-						end
-						interpreter.push_scope handler.enclosing_scope
-						interpreter.push_scope handler
-						result = handler.expressions.map { |e| interpreter.interpret e }.last
-
-						# Pop scopes in reverse order
-						interpreter.pop_scope # handler
-						interpreter.pop_scope # enclosing_scope
-						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
-							type = handler.enclosing_scope.enclosing_scope
-							interpreter.pop_scope # type
-							interpreter.pop_scope if type.enclosing_scope
-						end
+						call_expr           = Ore::Call_Expr.new
+						call_expr.receiver  = handler
+						call_expr.arguments = []
+						result = interpreter.interp_func_call handler, call_expr
 
 						# Do something with the result
 						component = handler.enclosing_scope
@@ -192,7 +178,6 @@ module Ore
 					response.body   = res.declarations['body']
 					headers_hash    = res.declarations['headers']
 					headers_hash.each { |k, v| response.header[k] = v }
-					Time
 
 					# note: WEBrick (or the browser) automatically include html and head elements if the response does not
 					if response.body.to_s =~ /<html|<body|<head/i
@@ -280,15 +265,6 @@ module Ore
 		def stop
 			webrick_server.shutdown if webrick_server
 			Thread.kill server_thread if server_thread
-		end
-
-		def prefixed_output output
-			req_info = Ascii.dim("▓▒░ ")
-			req_info << Ascii.dim(output.rjust(7, ' '))
-		end
-
-		def right_aligned output
-			output.rjust(7, ' ')
 		end
 	end
 end
