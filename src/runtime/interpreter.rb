@@ -1,7 +1,7 @@
 module Ore
 	class Interpreter
 		attr_accessor :input, :lexer, :parser, :load_standard_library,
-		              :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :cd_scopes
+		              :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files
 
 		def initialize
 			@load_standard_library = true
@@ -13,7 +13,6 @@ module Ore
 			@source_files          = {} # {filepath: String} for error reporting
 			@onclick_handlers      = {} # {handler_hash: Ore::Func}
 			@input_elements        = {} # {element_hash: Ore::Instance} for inputs/textareas
-			@cd_scopes             = Set.new # Scopes pushed via @cd directive
 			@lexer                 = Lexer.new
 			@parser                = Parser.new
 		end
@@ -1522,13 +1521,11 @@ module Ore
 				if expr.expression&.value == '..'
 					popped = pop_scope
 					raise unless popped.is_a? Ore::Temporary
-					cd_scopes.delete popped
 				else
 					target = interpret expr.expression
 					if target
 						scope = Ore::Temporary.new target.name
 						scope.sibling_scopes << target
-						cd_scopes.add target
 					else
 						raise Ore::Invalid_Directive_Usage.new(expr, self)
 					end
