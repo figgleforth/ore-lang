@@ -17,6 +17,7 @@ require_relative 'compiler/type_checker'
 # Runtime (AST to execution)
 require_relative 'runtime/errors'
 require_relative 'runtime/scopes'
+require_relative 'runtime/return'
 require_relative 'runtime/interpreter'
 
 module Ore

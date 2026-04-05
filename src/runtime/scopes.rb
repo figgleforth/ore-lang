@@ -96,15 +96,6 @@ module Ore
 		attr_accessor :http_method, :path, :handler, :parts, :param_names
 	end
 
-	class Return < Scope
-		attr_accessor :value
-
-		def initialize value
-			super 'Return'
-			@value = value
-		end
-	end
-
 	class String < Instance
 		require 'digest/md5'
 		extend Super_Proxies
