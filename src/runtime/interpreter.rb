@@ -174,6 +174,22 @@ module Ore
 			end
 		end
 
+		def track_static_declaration scope, ident_expr
+			return unless ident_expr.is_a?(Ore::Identifier_Expr) && ident_expr.scope_operator&.value == './'
+			scope.static_declarations ||= Set.new
+			scope.static_declarations.add ident_expr.value.to_s
+		end
+
+		def find_ruby_class_for_type type
+			type.types.to_a.reverse.each do |type_name|
+				ore_name = "Ore::#{type_name}"
+				next unless Object.const_defined? ore_name
+				k = Object.const_get ore_name
+				return k if k.is_a?(Class) && k < Ore::Instance && k != Ore::Instance
+			end
+			nil
+		end
+
 		def check_dot_access_permissions! scope, ident, expr
 			binding = Ore.binding_of_ident scope, ident
 			privacy = Ore.privacy_of_ident ident
@@ -481,11 +497,7 @@ module Ore
 
 			assignment_scope.declare expr.left.value, right_value
 
-			# Track static declarations
-			if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
-				assignment_scope.static_declarations ||= Set.new
-				assignment_scope.static_declarations.add expr.left.value.to_s
-			end
+			track_static_declaration assignment_scope, expr.left
 
 			return right_value
 		end
@@ -626,11 +638,7 @@ module Ore
 				scope = scope_for_identifier(expr.left) || stack.last
 				scope.declare expr.left.value, interpret(expr.right)
 
-				# Track static declarations (same as in interp_infix_equals)
-				if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
-					scope.static_declarations ||= Set.new
-					scope.static_declarations.add expr.left.value.to_s
-				end
+				track_static_declaration scope, expr.left
 			end
 		end
 
@@ -848,36 +856,8 @@ module Ore
 			# - Delete :new from instance, no longer needed
 			#
 
-			# todo: Clean this up
-			ore_name = "Ore::#{type.name}"
-			instance = if Object.const_defined?(ore_name)
-				konstant = Object.const_get(ore_name)
-				# note: Only instantiate if it's a subclass of Instance (but not Instance itself) to exclude core runtime types like Type, Scope, Func, etc.
-				if konstant.is_a?(Class) && konstant < Ore::Instance && konstant != Ore::Instance
-					if konstant.respond_to?(:new)
-						konstant.new
-					else
-						konstant
-					end
-				else
-					Ore::Instance.new type.name
-				end
-			else
-				types               = type.types.to_a # note: Types is a set, so the #to_a lets me iterate below
-				first_composed_with = "Ore::#{types[1] || types[0]}" # note: types[0] is this type's name, fallback to itself
-
-				first_composition = if Object.const_defined? first_composed_with
-					Object.const_get first_composed_with
-				else
-					Ore::Instance
-				end
-
-				if first_composition < Ore::Instance && first_composition != Ore::Instance
-					first_composition.new
-				else
-					Ore::Instance.new type.name
-				end
-			end
+			ruby_class = find_ruby_class_for_type type
+			instance   = ruby_class ? ruby_class.new : Ore::Instance.new(type.name)
 
 			instance.name            = type.name
 			instance.types           = type.types
@@ -944,12 +924,7 @@ module Ore
 			if func.name&.value
 				stack.last.declare func.name.value, func
 
-				# Track static functions (functions defined with ..)
-				# Get the original name expression to check for scope operator
-				if expr.name.is_a?(Ore::Identifier_Expr) && expr.name.scope_operator&.value == './'
-					stack.last.static_declarations ||= Set.new
-					stack.last.static_declarations.add func.name.value
-				end
+				track_static_declaration stack.last, expr.name
 			end
 
 			func
@@ -1287,55 +1262,25 @@ module Ore
 				# Initialize collection variables outside catch block so they persist after stop
 				collected = []
 				count_val = 0
+				chunks    = if stride
+					values.each_slice(stride).each_with_index
+				else
+					values.each_with_index
+				end
 
 				stop_value = catch :stop do
-					if stride
-						slices = values.each_slice(stride).to_a
-
+					chunks.each do |element, index|
 						case loop_type
 						when 'each'
-							slices.each_with_index do |elements, index|
-								result = iterate_body.call elements, index
-							end
+							result = iterate_body.call element, index
 						when 'map'
-							slices.each_with_index do |elements, index|
-								collected << iterate_body.call(elements, index)
-							end
+							collected << iterate_body.call(element, index)
 						when 'select'
-							slices.each_with_index do |elements, index|
-								collected << elements if truthy? iterate_body.call(elements, index)
-							end
+							collected << element if truthy? iterate_body.call(element, index)
 						when 'reject'
-							slices.each_with_index do |elements, index|
-								collected << elements unless truthy? iterate_body.call(elements, index)
-							end
+							collected << element unless truthy? iterate_body.call(element, index)
 						when 'count'
-							slices.each_with_index do |elements, index|
-								count_val += 1 if truthy? iterate_body.call(elements, index)
-							end
-						end
-					else
-						case loop_type
-						when 'each'
-							values.each_with_index do |element, index|
-								result = iterate_body.call element, index
-							end
-						when 'map'
-							values.each_with_index do |element, index|
-								collected << iterate_body.call(element, index)
-							end
-						when 'select'
-							values.each_with_index do |element, index|
-								collected << element if truthy? iterate_body.call(element, index)
-							end
-						when 'reject'
-							values.each_with_index do |element, index|
-								collected << element unless truthy? iterate_body.call(element, index)
-							end
-						when 'count'
-							values.each_with_index do |element, index|
-								count_val += 1 if truthy? iterate_body.call(element, index)
-							end
+							count_val += 1 if truthy? iterate_body.call(element, index)
 						end
 					end
 					nil
@@ -1459,21 +1404,9 @@ module Ore
 
 				# note: For static proxies on Types (like Record.find), create a temporary instance of the Ruby class. This allows the proxy method to access the Type's declarations.
 				target = if instance_or_type.instance_of?(Ore::Type) && instance_or_type.name
-					# Check all types in the composition to find a matching Ruby class
-					matching_class = nil
-					instance_or_type.types.to_a.reverse.each do |type_name|
-						ore_class_name = "Ore::#{type_name}"
-						if Object.const_defined?(ore_class_name)
-							konstant = Object.const_get ore_class_name
-							if konstant.is_a?(Class) && konstant < Ore::Instance
-								matching_class = konstant
-								break
-							end
-						end
-					end
-
-					if matching_class
-						temp_instance              = matching_class.new instance_or_type.name
+					ruby_class = find_ruby_class_for_type instance_or_type
+					if ruby_class
+						temp_instance              = ruby_class.new instance_or_type.name
 						temp_instance.declarations = instance_or_type.declarations
 						# todo: Do static_declarations need to be copied over?
 						temp_instance
