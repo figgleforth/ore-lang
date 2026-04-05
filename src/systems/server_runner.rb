@@ -82,7 +82,7 @@ module Ore
 			# This handles the dom.js onclick request, not user code
 			if path_string.start_with?("/onclick/")
 				object_id = path_parts.last.to_i
-				handler   = interpreter.runtime.onclick_handlers[object_id]
+				handler   = interpreter.onclick_handlers[object_id]
 				if handler
 					begin
 						# Update input element values from the request body
@@ -90,7 +90,7 @@ module Ore
 							json_body = JSON.parse request.body rescue {}
 							inputs    = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
-								input_instance = interpreter.runtime.input_elements[element_id.to_i]
+								input_instance = interpreter.input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
 							end
 						end
@@ -151,7 +151,7 @@ module Ore
 				}
 				# This declares `browser_view_size` in the current scope, which should be the route handler?
 				# todo: A better way to store this information, and make it accessible at runtime. Some
-				interpreter.runtime.stack.last.declare BROWSER_VIEW_SIZE, size
+				interpreter.stack.last.declare BROWSER_VIEW_SIZE, size
 			end
 
 			route_function = match_route http_method, path_parts, routes

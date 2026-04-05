@@ -162,8 +162,8 @@ class E2E_Server_Test < Minitest::Test
 		interpreter = Ore::Interpreter.new
 		interpreter.run code
 
-		a_instance = interpreter.runtime.stack.first['a']
-		b_instance = interpreter.runtime.stack.first['b']
+		a_instance = interpreter.stack.first['a']
+		b_instance = interpreter.stack.first['b']
 
 		routes_a = interpreter.collect_routes_from_instance a_instance
 		routes_b = interpreter.collect_routes_from_instance b_instance

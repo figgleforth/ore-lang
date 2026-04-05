@@ -69,8 +69,8 @@ module Ore
 				interpreter.register_source filepath, code
 				result = interpreter.run code
 
-				if interpreter.runtime.servers.any?
-					current_servers = interpreter.runtime.servers
+				if interpreter.servers.any?
+					current_servers = interpreter.servers
 
 					unless listener
 						listener = Listen.to('.', only: /\.(ore|rb)$/) do |modified, added, removed|
