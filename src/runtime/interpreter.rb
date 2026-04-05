@@ -195,9 +195,8 @@ module Ore
 			end
 		end
 
-		# todo: Maybe this should go on Ore::Server_Runner?
 		def collect_routes_from_instance instance
-			routes = {}
+			collected_routes = {}
 
 			# This iterates composed types to find any
 			instance.types.each do |type_name|
@@ -206,11 +205,11 @@ module Ore
 
 				# Merge routes from this type
 				composed_type.routes.each do |key, route|
-					routes[key] ||= route
+					collected_routes[key] ||= route
 				end
 			end
 
-			routes
+			collected_routes
 		end
 
 		def render_dom_to_html dom_instance
@@ -1153,7 +1152,7 @@ module Ore
 				enclosing_type.routes[route_key] = route
 			end
 
-			routes[route_key] = route
+			@routes[route_key] = route
 			stack.last.declare route_key, route
 
 			route
@@ -1504,8 +1503,8 @@ module Ore
 					raise Ore::Invalid_Start_Directive_Argument.new(expr, self)
 				end
 
-				routes      = collect_routes_from_instance server_instance
-				user_server = Ore::User_Server.new server_instance, self, routes
+				collected_routes = collect_routes_from_instance server_instance
+				user_server      = Ore::User_Server.new server_instance, self, collected_routes
 				servers << user_server
 
 				user_server.start
