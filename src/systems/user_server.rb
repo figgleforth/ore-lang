@@ -3,7 +3,7 @@ require 'cgi'
 require 'json'
 
 module Ore
-	class Server_Runner
+	class User_Server
 		DEFAULT_PORT = 8080
 
 		attr_accessor :server_instance, :interpreter, :port, :routes, :webrick_server, :server_thread
@@ -88,7 +88,7 @@ module Ore
 						# Update input element values from the request body
 						if request.body && !request.body.empty?
 							json_body = JSON.parse request.body rescue {}
-							inputs    = json_body['inputs'] || {}
+							inputs = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
 								input_instance = interpreter.input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
@@ -146,8 +146,8 @@ module Ore
 			if cookie = request.cookies.find { _1.name == BROWSER_VIEW_SIZE }
 				parts = cookie.value.split 'x'
 				size  = {
-					  width:  parts[0].to_i,
-					  height: parts[1].to_i
+					width:  parts[0].to_i,
+					height: parts[1].to_i
 				}
 				# This declares `browser_view_size` in the current scope, which should be the route handler?
 				# todo: A better way to store this information, and make it accessible at runtime. Some

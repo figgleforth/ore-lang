@@ -87,7 +87,7 @@ class Server_Test < Base_Test
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
 
-		server_runner = Ore::Server_Runner.new server_instance, interpreter
+		server_runner = Ore::User_Server.new server_instance, interpreter
 
 		assert_equal 8888, server_runner.port
 		assert_equal server_instance, server_runner.server_instance
@@ -119,7 +119,7 @@ class Server_Test < Base_Test
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
 
-		Ore::Server_Runner.new server_instance, interpreter
+		Ore::User_Server.new server_instance, interpreter
 
 		assert_equal 2, interpreter.routes.count
 	end
@@ -149,7 +149,7 @@ class Server_Test < Base_Test
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
 
-		server_runner = Ore::Server_Runner.new server_instance, interpreter
+		server_runner = Ore::User_Server.new server_instance, interpreter
 		routes        = interpreter.routes
 
 		# Test matching simple parameterized route
@@ -188,7 +188,7 @@ class Server_Test < Base_Test
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
 
-		server_runner = Ore::Server_Runner.new server_instance, interpreter
+		server_runner = Ore::User_Server.new server_instance, interpreter
 		route         = interpreter.routes.values.first
 
 		path_parts = ['users', '42', 'posts', '99']
@@ -200,7 +200,7 @@ class Server_Test < Base_Test
 
 	def test_query_string_parsing
 		interpreter   = Ore::Interpreter.new
-		server_runner = Ore::Server_Runner.new Ore::Instance.new('Server'), interpreter
+		server_runner = Ore::User_Server.new Ore::Instance.new('Server'), interpreter
 
 		query_params = server_runner.parse_query_string 'name=John&age=30&city=NYC'
 
@@ -211,7 +211,7 @@ class Server_Test < Base_Test
 
 	def test_query_string_with_url_encoding
 		interpreter   = Ore::Interpreter.new
-		server_runner = Ore::Server_Runner.new Ore::Instance.new('Server'), interpreter
+		server_runner = Ore::User_Server.new Ore::Instance.new('Server'), interpreter
 
 		query_params = server_runner.parse_query_string 'message=Hello%20World&special=%21%40%23'
 

@@ -7,7 +7,7 @@ module Ore
 			@load_standard_library = true
 			@input                 = [] # [Ore::Expression]
 			@stack                 = [] # [Ore::Scope]
-			@servers               = [] # [Ore::Server_Runner]
+			@servers               = [] # [Ore::User_Server]
 			@routes                = {} # {route: Ore::Route}
 			@loaded_files          = {} # {filename: [Ore::Expression]}
 			@source_files          = {} # {filepath: String} for error reporting
@@ -1505,12 +1505,12 @@ module Ore
 					raise Ore::Invalid_Start_Directive_Argument.new(expr, self)
 				end
 
-				routes        = collect_routes_from_instance server_instance
-				server_runner = Ore::Server_Runner.new server_instance, self, routes
-				servers << server_runner
+				routes      = collect_routes_from_instance server_instance
+				user_server = Ore::User_Server.new server_instance, self, routes
+				servers << user_server
 
-				server_runner.start
-				server_runner
+				user_server.start
+				user_server
 			when 'connect'
 				database = interpret expr.expression
 				database.create_connection!
