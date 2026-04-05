@@ -11,8 +11,8 @@ This [`src`](/src) folder contains the implementation of Ore in Ruby. The codeba
 
 **Runtime** (`src/runtime/`) AST to Execution
 
-- [`interpreter.rb`](runtime/interpreter.rb) - The running program; owns a Lexer, Parser, and Runtime; `run(source)` is the entry point
-- [`scopes.rb`](runtime/scopes.rb) - All scope types (Runtime, Type, Instance, Func, Route, …) and built-in types (String, Array, Number, …)
+- [`interpreter.rb`](runtime/interpreter.rb) - The running program; owns a Lexer and Parser; `run(source)` is the entry point
+- [`scopes.rb`](runtime/scopes.rb) - All scope types (Global, Type, Instance, Func, Route, …) and built-in types (String, Array, Number, …)
 - [`errors.rb`](runtime/errors.rb) - Runtime error definitions
 
 **Shared** (`src/shared/`)

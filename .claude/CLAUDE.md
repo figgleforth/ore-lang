@@ -55,7 +55,7 @@ bundle install
 
 Three phases: **Lexer → Parser → Interpreter**
 
-`Interpreter` is the main entry point. It owns a `Lexer`, `Parser`, and `Runtime`, and exposes `run(source_code)` which drives all three phases. `Lexer` and `Parser` are plain transformation classes you can also call directly.
+`Interpreter` is the main entry point. It owns a `Lexer` and `Parser`, and exposes `run(source_code)` which drives all three phases. `Lexer` and `Parser` are plain transformation classes you can also call directly.
 
 ### Compile-time (src/compiler/)
 
@@ -70,9 +70,9 @@ Source code is tokenized and parsed into an Abstract Syntax Tree (AST):
 
 The AST is executed to produce output:
 
-- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, `@runtime`; `run(source)` is the entry point; also handles file loading via `load_file_into_scope`
+- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, and all execution state (`stack`, `routes`, `servers`, `loaded_files`, etc.); `run(source)` is the entry point; handles file loading via `load_file_into_scope`
 - `scopes.rb` - All scope types and built-in types:
-	- `Runtime < Scope` - The global scope and execution state (stack, routes, servers, loaded files, etc.)
+	- `Global < Scope` - The global scope; pushed as the bottom of the stack on first `run`; standard library declarations live here
 	- `Type`, `Instance`, `Func`, `Route`, `Return` - Scope hierarchy
 	- `String`, `Array`, `Number`, `Dictionary`, `Server`, `Record`, `Database`, etc. - Built-in types
 - `errors.rb` - Runtime error definitions
@@ -96,14 +96,14 @@ The AST is executed to produce output:
 
 ### Standard Library
 
-- `ore/preload.ore` - Auto-loaded into the Runtime (global scope) when `load_standard_library` is `true` (default)
+- `ore/preload.ore` - Auto-loaded into the global scope when `load_standard_library` is `true` (default)
 - Standard library path defined in `Ore::STANDARD_LIBRARY_PATH`
 
 ## Scope System
 
 Ore uses a scope hierarchy, all defined in `src/runtime/scopes.rb`:
 
-- **Runtime** - The global scope; IS the bottom of the scope stack; holds execution state (routes, servers, loaded files, etc.); standard library declarations live here
+- **Global** - The global scope; pushed as the bottom of `Interpreter#stack` on first `run`; standard library declarations live here; execution state (routes, servers, loaded files, etc.) lives directly on `Interpreter`
 - **Type** - Class definitions (tracks `@types`, `@expressions`)
 - **Instance** - Class instances
 - **Func** - Function scopes (tracks `@expressions`)
@@ -721,6 +721,6 @@ Styled_Div | Dom {
 
 The `@use` directive allows importing Ore files:
 
-- Context tracks loaded files to prevent duplicate parsing
-- Files are loaded into specified scope via `Runtime#load_file`
-- Expressions are cached in `@loaded_files` hash keyed by resolved filepath
+.- Interpreter tracks loaded files in `@loaded_files` to prevent duplicate parsing
+- Files are loaded into a specified scope via `Interpreter#load_file_into_scope`
+- Expressions are cached in `@loaded_files` keyed by resolved filepath
