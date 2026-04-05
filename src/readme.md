@@ -1,6 +1,6 @@
 ### What's here?
 
-This [`src`](/src) folder contains the implementation of Ore in Ruby. The codebase is organized into two main phases:
+This [`src`](/src) folder contains the implementation of Ore in Ruby. The codebase is organized into three phases:
 
 **Compile-time** (`src/compiler/`) Source code to AST
 
@@ -11,50 +11,61 @@ This [`src`](/src) folder contains the implementation of Ore in Ruby. The codeba
 
 **Runtime** (`src/runtime/`) AST to Execution
 
-- [`interpreter.rb`](runtime/interpreter.rb) - Executes the AST
+- [`interpreter.rb`](runtime/interpreter.rb) - The running program; owns a Lexer and Parser; `run(source)` is the entry point
+- [`scopes.rb`](runtime/scopes.rb) - All scope types (Global, Type, Instance, Func, Route, …) and built-in types (String, Array, Number, …)
 - [`errors.rb`](runtime/errors.rb) - Runtime error definitions
-- [`scope.rb`](runtime/scopes.rb) - Scoping and variable management
-- [`scopes.rb`](runtime/scopes.rb) - Runtime scope definitions
-- [`runtime.rb`](runtime/runtime.rb) - Execution state management
 
-**Orchestration**
+**Shared** (`src/shared/`)
 
-- [`ore.rb`](ore.rb) - Main entry point, requires all components
 - [`constants.rb`](shared/constants.rb) - Language constants and operator definitions
 - [`helpers.rb`](shared/helpers.rb) - Utility functions added to Ore module
+
+**Entry point**
+
+- [`ore.rb`](ore.rb) - Requires all components; exposes `Ore.lex`, `Ore.parse`, `Ore.interp` convenience methods
 
 ---
 
 ### Running Your Own Programs With Ruby
 
-To run an Ore program, the source code must go through the [Lexer](compiler/lexer.rb), whose output goes through the [Parser](compiler/parser.rb), whose output goes through the [Interpreter](runtime/interpreter.rb), resulting in final program output.
+`Interpreter` is the entry point. Call `run` with source code and it handles lexing, parsing, and execution:
 
 ```ruby
 require './src/ore'
 
-lexer   = Ore::Lexer.new "'Hello, World!'"
-lexemes = lexer.output # => array of Lexemes
-
-parser      = Ore::Parser.new lexemes
-expressions = parser.output # => array of Expressions
-
-interpreter = Ore::Interpreter.new expressions
-result      = interpreter.output # => Hello, World!
+interpreter = Ore::Interpreter.new
+result      = interpreter.run "'Hello, World!'" # => Hello, World!
 ```
 
-Another option is to use one of the [`#Ore.lex*`, `Ore.parse*`,`Ore.interp*`](runtime/helpers.rb) helpers, which saves you three lines if you only need the output.
+You can also step through each phase manually:
+
+```ruby
+require './src/ore'
+
+lexer       = Ore::Lexer.new "'Hello, World!'"
+lexemes     = lexer.output       # => array of Lexemes
+
+parser      = Ore::Parser.new lexemes
+expressions = parser.output      # => array of Expressions
+
+interpreter       = Ore::Interpreter.new
+interpreter.input = expressions
+result            = interpreter.output # => Hello, World!
+```
+
+Or use the `Ore` module convenience methods:
 
 ```ruby
 require './src/ore'
 
 source      = '"Hello, Again!"'
-lexemes     = Ore.lex source # => array of Lexemes
-expressions = Ore.parse source # => array of Expressions
-result      = Ore.interp source # => Hello, Again!
+lexemes     = Ore.lex source        # => array of Lexemes
+expressions = Ore.parse source      # => array of Expressions
+result      = Ore.interp source     # => Hello, Again!
 
 source_file = './my_program.ore'
-lexemes     = Ore.lex_file source_file # => array of Lexemes
-expressions = Ore.parse_file source_file # => array of Expressions
+lexemes     = Ore.lex_file source_file
+expressions = Ore.parse_file source_file
 result      = Ore.interp_file source_file
 ```
 

@@ -435,6 +435,6 @@ Note: Rendering HTML only works when `render{;}` is called by a Server instance.
 - [`examples`](examples) contains code examples written in Ore
 - [`ore`](ore) contains code for the Ore standard library
 - [`src`](src) contains code implementing Ore
-	- [Lexer#output](src/compiler/lexer.rb) – Source code to Lexemes
-	- [Parser#output](src/compiler/parser.rb) – Lexemes to Expressions
-	- [Interpreter#output](src/runtime/interpreter.rb) – Expressions to values
+	- [Lexer](src/compiler/lexer.rb) – Source code to Lexemes
+	- [Parser](src/compiler/parser.rb) – Lexemes to Expressions
+	- [Interpreter](src/runtime/interpreter.rb) – Entry point; `run(source)` lexes, parses, and executes

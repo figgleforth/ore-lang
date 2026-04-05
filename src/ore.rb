@@ -2,8 +2,6 @@ require_relative 'shared/constants'
 require_relative 'shared/helpers'
 require_relative 'shared/ascii'
 require_relative 'shared/super_proxies'
-require_relative 'shared/stage'
-require_relative 'shared/pipeline'
 
 require_relative 'systems/server_runner'
 require_relative 'systems/dom_renderer'
@@ -19,7 +17,6 @@ require_relative 'compiler/type_checker'
 # Runtime (AST to execution)
 require_relative 'runtime/errors'
 require_relative 'runtime/scopes'
-require_relative 'runtime/runtime'
 require_relative 'runtime/interpreter'
 
 module Ore
@@ -28,18 +25,21 @@ module Ore
 
 	extend Helpers
 
-	def self.interp_file filepath, with_std: true
-		source_code  = File.read filepath
-		filepath     = File.expand_path filepath
-		global_scope = with_std ? Global.with_standard_library : Global.new
-		runtime      = Ore::Runtime.new global_scope
-		runtime.register_source filepath, source_code
-
-		interpreter = Interpreter.new [], runtime
-		Pipeline.new(Lexer, Parser, interpreter).run source_code
+	def self.interp source_code, load_standard_library: true
+		interpreter                       = Interpreter.new
+		interpreter.load_standard_library = load_standard_library
+		interpreter.run source_code
 	end
 
-	def self.interp_file_with_hot_reload filepath, with_std: true
+	def self.interp_file filepath, load_standard_library: true
+		source_code                       = File.read filepath
+		interpreter                       = Interpreter.new
+		interpreter.load_standard_library = load_standard_library
+		interpreter.register_source filepath, source_code
+		interpreter.run source_code
+	end
+
+	def self.interp_file_with_hot_reload filepath, load_standard_library: true
 		require 'listen'
 
 		reload          = true
@@ -63,20 +63,14 @@ module Ore
 			while reload && !shutdown
 				reload = false
 
-				code  = File.read filepath
-				scope = if with_std
-					Ore::Global.with_standard_library
-				else
-					Ore::Global.new
-				end
+				code                              = File.read filepath
+				interpreter                       = Interpreter.new
+				interpreter.load_standard_library = load_standard_library
+				interpreter.register_source filepath, code
+				result = interpreter.run code
 
-				runtime = Ore::Runtime.new scope
-				runtime.register_source filepath, code
-				interpreter = Ore::Interpreter.new [], runtime
-				result      = Pipeline.new(Lexer, Parser, interpreter).run code
-
-				if interpreter.runtime.servers.any?
-					current_servers = interpreter.runtime.servers
+				if interpreter.servers.any?
+					current_servers = interpreter.servers
 
 					unless listener
 						listener = Listen.to('.', only: /\.(ore|rb)$/) do |modified, added, removed|
@@ -104,23 +98,19 @@ module Ore
 		result
 	end
 
-	def self.interp source_code
-		Pipeline.default.run source_code
+	def self.parse source_code
+		Parser.new(Lexer.new(source_code).output).output
 	end
 
 	def self.parse_file filepath
-		Pipeline.new(Lexer, Parser).run File.read(filepath)
-	end
-
-	def self.parse source_code
-		Pipeline.new(Lexer, Parser).run source_code
-	end
-
-	def self.lex_file filepath
-		Pipeline.new(Lexer).run File.read(filepath)
+		Parser.new(Lexer.new(File.read(filepath)).output).output
 	end
 
 	def self.lex source_code
-		Pipeline.new(Lexer).run source_code
+		Lexer.new(source_code).output
+	end
+
+	def self.lex_file filepath
+		Lexer.new(File.read(filepath)).output
 	end
 end

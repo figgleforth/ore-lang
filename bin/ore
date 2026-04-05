@@ -23,7 +23,7 @@ INSTRUCTIONS = <<~INST
     EXAMPLES:
         ore myapp.ore
         ore lex "x = 5 + 3"
-        ore parse -f test.ore
+        ore parsef test.ore
         ore interp myapp.ore
 INST
 
@@ -53,9 +53,9 @@ begin
 	when 'interpf'
 		pp Ore.interp_file ARGV[1]
 	when 'interp-nostd'
-		pp Ore.interp ARGV[1], with_std: false
+		pp Ore.interp ARGV[1], load_standard_library: false
 	when 'interpf-nostd'
-		pp Ore.interp_file ARGV[1], with_std: false
+		pp Ore.interp_file ARGV[1], load_standard_library: false
 	else
 		if ARGV[0]
 			Ore.interp_file_with_hot_reload ARGV[0]

@@ -82,17 +82,15 @@ module Ore
 			# This handles the dom.js onclick request, not user code
 			if path_string.start_with?("/onclick/")
 				object_id = path_parts.last.to_i
-				handler   = interpreter.runtime.onclick_handlers[object_id]
+				handler   = interpreter.onclick_handlers[object_id]
 				if handler
 					begin
-						runtime = interpreter.runtime
-
 						# Update input element values from the request body
 						if request.body && !request.body.empty?
 							json_body = JSON.parse request.body rescue {}
 							inputs    = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
-								input_instance = runtime.input_elements[element_id.to_i]
+								input_instance = interpreter.input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
 							end
 						end
@@ -100,20 +98,20 @@ module Ore
 						# Push the proper scope chain (instance, type, and function scopes)
 						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
 							type = handler.enclosing_scope.enclosing_scope
-							runtime.push_scope type.enclosing_scope if type.enclosing_scope
-							runtime.push_scope type
+							interpreter.push_scope type.enclosing_scope if type.enclosing_scope
+							interpreter.push_scope type
 						end
-						runtime.push_scope handler.enclosing_scope
-						runtime.push_scope handler
+						interpreter.push_scope handler.enclosing_scope
+						interpreter.push_scope handler
 						result = handler.expressions.map { |e| interpreter.interpret e }.last
 
 						# Pop scopes in reverse order
-						runtime.pop_scope # handler
-						runtime.pop_scope # enclosing_scope
+						interpreter.pop_scope # handler
+						interpreter.pop_scope # enclosing_scope
 						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
 							type = handler.enclosing_scope.enclosing_scope
-							runtime.pop_scope # type
-							runtime.pop_scope if type.enclosing_scope
+							interpreter.pop_scope # type
+							interpreter.pop_scope if type.enclosing_scope
 						end
 
 						# Do something with the result
@@ -153,7 +151,7 @@ module Ore
 				}
 				# This declares `browser_view_size` in the current scope, which should be the route handler?
 				# todo: A better way to store this information, and make it accessible at runtime. Some
-				interpreter.runtime.stack.last.declare BROWSER_VIEW_SIZE, size
+				interpreter.stack.last.declare BROWSER_VIEW_SIZE, size
 			end
 
 			route_function = match_route http_method, path_parts, routes
@@ -239,7 +237,6 @@ module Ore
 					response.header['Content-Type'] = 'text/html; charset=utf-8'
 				end
 			else
-				puts "no matching route function"
 				# 404 Not Found
 				response.status = 404
 				response.body   = <<~HTML

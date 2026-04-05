@@ -1,12 +1,19 @@
 module Ore
-	class Lexer < Stage
-		attr_accessor :i, :col, :line, :source_file
+	class Lexer
+		attr_accessor :i, :col, :line, :source_file, :input
 
 		def initialize input = 'greeting = "hello world"'
-			super input
-			@i    = 0 # index of current char in input string
-			@col  = 1 # short for column
-			@line = 1 # short for line
+			@input = input
+			@i     = 0 # index of current char in input string
+			@col   = 1 # short for column
+			@line  = 1 # short for line
+		end
+
+		def input= value
+			@input = value
+			@i     = 0
+			@col   = 1
+			@line  = 1
 		end
 
 		def whitespace? char = curr

@@ -1,10 +1,15 @@
 module Ore
-	class Parser < Stage
-		attr_accessor :i
+	class Parser
+		attr_accessor :i, :input
 
 		def initialize input = []
-			super input
-			@i = 0 # index of current lexeme
+			@input = input
+			@i     = 0 # index of current lexeme
+		end
+
+		def input= value
+			@input = value
+			@i     = 0
 		end
 
 		def copy_location expr, from_lexeme_or_expr

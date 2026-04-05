@@ -3,21 +3,21 @@ require_relative '../src/ore'
 require_relative 'base_test'
 
 class Pipeline_Test < Base_Test
-	def test_default_pipeline
-		pipe = Ore::Pipeline.default
-		assert_equal 42, pipe.run("42")
+	def test_interp
+		assert_equal 42, Ore::Interpreter.new.run("42")
 	end
 
-	def test_lexer_only
-		pipe = Ore::Pipeline.new Ore::Lexer
-		assert_instance_of ::Array, pipe.run("42")
-		assert_instance_of Ore::Lexeme, pipe.run("42").first
+	def test_lex
+		result = Ore::Lexer.new("42").output
+		assert_instance_of ::Array, result
+		assert_instance_of Ore::Lexeme, result.first
 	end
 
-	def test_lexer_and_parser_only
-		pipe = Ore::Pipeline.new Ore::Lexer, Ore::Parser
-		assert_instance_of ::Array, pipe.run("42")
-		assert_instance_of Ore::Number_Expr, pipe.run("42").first
+	def test_parse
+		lexemes = Ore::Lexer.new("42").output
+		result  = Ore::Parser.new(lexemes).output
+		assert_instance_of ::Array, result
+		assert_instance_of Ore::Number_Expr, result.first
 	end
 
 	def test_documenter
@@ -26,11 +26,15 @@ class Pipeline_Test < Base_Test
 		    1 + 1 # another comment
 		    ```a fence!```
 		CODE
-		pipe = Ore::Pipeline.new Ore::Lexer, Ore::Parser, Ore::Documenter
-		assert_equal ['a comment', 'another comment', 'a fence!'], pipe.run(code).map(&:value)
+		lexemes     = Ore::Lexer.new(code).output
+		expressions = Ore::Parser.new(lexemes).output
+		result      = Ore::Documenter.new(expressions).output
+		assert_equal ['a comment', 'another comment', 'a fence!'], result.map(&:value)
 	end
 
 	def test_type_checker
-		Ore::Pipeline.new Ore::Lexer, Ore::Parser, Ore::Type_Checker
+		lexemes     = Ore::Lexer.new("42").output
+		expressions = Ore::Parser.new(lexemes).output
+		Ore::Type_Checker.new(expressions)
 	end
 end

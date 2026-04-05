@@ -1,6 +1,12 @@
 module Ore
 	# A proof of concept to see what a documentation stage might look like
-	class Documenter < Stage
+	class Documenter
+		attr_accessor :input
+
+		def initialize input
+			@input = input
+		end
+
 		def output
 			input.map do |expr|
 				case expr

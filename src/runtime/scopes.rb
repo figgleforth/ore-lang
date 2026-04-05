@@ -51,17 +51,6 @@ module Ore
 			@declarations.delete(key.to_s)
 		end
 
-		def self.with_standard_library
-			global = new
-			global.load_standard_library
-			global
-		end
-
-		def load_standard_library
-			temp_runtime = Ore::Runtime.new
-			temp_runtime.load_file_into_scope STANDARD_LIBRARY_PATH, self
-		end
-
 		def inspect
 			filtered = instance_variables.reject { |v| v == :@enclosing_scope }
 			vars     = filtered.map { |v| "#{v}=#{instance_variable_get(v).inspect}" }
