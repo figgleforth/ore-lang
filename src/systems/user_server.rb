@@ -55,7 +55,7 @@ module Ore
 		end
 
 		# @param request [WEBrick::HTTPRequest, WEBrick::HTTPResponse]
-		def handle_request request, response, routes
+		def handle_request request, response
 			path_string  = request.path
 			query_string = request.query_string
 			http_method  = request.request_method.downcase
@@ -98,7 +98,7 @@ module Ore
 						call_expr           = Ore::Call_Expr.new
 						call_expr.receiver  = handler
 						call_expr.arguments = []
-						result = interpreter.interp_func_call handler, call_expr
+						result              = interpreter.interp_func_call handler, call_expr
 
 						# Do something with the result
 						component = handler.enclosing_scope
@@ -245,14 +245,14 @@ module Ore
 			# This receives requests from dom.js
 			webrick_server.mount_proc '/onclick/' do |req, res|
 				puts Ascii.dim "▓▒░ #{'DOM'.rjust(7, ' ')} #{req.path}"
-				handle_request req, res, @routes
+				handle_request req, res
 				# todo: Old handlers accumulate if you navigate away, since they stay in memory, maybe some unmount process
 				# todo: A way to deregister handlers when a component is no longer rendered
 			end
 
 			# This receives the rest of the requests
 			webrick_server.mount_proc '' do |req, res|
-				handle_request req, res, @routes
+				handle_request req, res
 			end
 
 			@server_thread = Thread.new do
