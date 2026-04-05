@@ -69,7 +69,7 @@ module Ore
 				req_info = req_info.prepend Ascii.green
 			end
 
-			req_info << Ascii.dim(http_method.upcase.rjust(7, ' '))
+			req_info << Ascii.dim(http_method.upcase.rjust(7, " "))
 			req_info << " "
 			req_info << Ascii.reset(path_string.gsub("/", "#{Ascii.dim('/')}#{Ascii.reset}"))
 
@@ -95,10 +95,14 @@ module Ore
 							end
 						end
 
-						call_expr           = Ore::Call_Expr.new
-						call_expr.receiver  = handler
-						call_expr.arguments = []
-						result              = interpreter.interp_func_call handler, call_expr
+						route             = Ore::Route.new
+						route.handler     = handler
+						route.param_names = []
+
+						req = build_ore_request path_string, http_method, body_hash, parse_query_string(query_string), {}, headers_hash
+						res = build_ore_response response
+
+						interpreter.interp_route_handler route, req, res
 
 						# Do something with the result
 						component = handler.enclosing_scope
@@ -146,29 +150,10 @@ module Ore
 				url_params   = extract_url_params path_parts, route_function
 				query_params = parse_query_string query_string
 
-				req = Ore::Request.new
-				interpreter.link_instance_to_type req, 'Request'
-
-				body_dict    = Ore::Dictionary.new body_hash
-				query_dict   = Ore::Dictionary.new query_params
-				params_dict  = Ore::Dictionary.new url_params
-				headers_dict = Ore::Dictionary.new headers_hash
-				interpreter.link_instance_to_type body_dict, 'Dictionary'
-				interpreter.link_instance_to_type query_dict, 'Dictionary'
-				interpreter.link_instance_to_type params_dict, 'Dictionary'
-				interpreter.link_instance_to_type headers_dict, 'Dictionary'
-
-				req.declarations['path']              = path_string
-				req.declarations['method']            = http_method
-				req.declarations['query']             = query_dict
-				req.declarations['params']            = params_dict
-				req.declarations['headers']           = headers_dict
-				req.declarations['body']              = body_dict
-				req.declarations['body'].declarations = body_hash
+				req = build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
 
 				begin
-					res = Ore::Response.new response
-					interpreter.link_instance_to_type res, 'Response'
+					res = build_ore_response response
 
 					# The route handler could return Html|Dom, Body|Dom etc, or even just a string. Sounds like I have to make sure the format of the final Html is correct
 					result = interpreter.interp_route_handler route_function, req, res, url_params, server_instance: @server_instance
@@ -260,6 +245,37 @@ module Ore
 			end
 
 			server_thread
+		end
+
+		def build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
+			req          = Ore::Request.new
+			body_dict    = Ore::Dictionary.new body_hash
+			query_dict   = Ore::Dictionary.new query_params
+			params_dict  = Ore::Dictionary.new url_params
+			headers_dict = Ore::Dictionary.new headers_hash
+			interpreter.link_instance_to_type req, 'Request'
+			interpreter.link_instance_to_type body_dict, 'Dictionary'
+			interpreter.link_instance_to_type query_dict, 'Dictionary'
+			interpreter.link_instance_to_type params_dict, 'Dictionary'
+			interpreter.link_instance_to_type headers_dict, 'Dictionary'
+			req.declarations['path']              = path_string
+			req.declarations['method']            = http_method
+			req.declarations['query']             = query_dict
+			req.declarations['params']            = params_dict
+			req.declarations['headers']           = headers_dict
+			req.declarations['body']              = body_dict
+			req.declarations['body'].declarations = body_hash
+			req
+		end
+
+		def build_ore_response webrick_response
+			res                                  = Ore::Response.new webrick_response
+			res.declarations['webrick_response'] = webrick_response
+			res.declarations['status']           = 200
+			res.declarations['headers']          = {}
+			res.declarations['body']             = ''
+			interpreter.link_instance_to_type res, 'Response'
+			res
 		end
 
 		def stop

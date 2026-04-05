@@ -382,22 +382,12 @@ module Ore
 	class Request < Scope
 		def initialize
 			super 'Request'
-			@declarations['path']    = nil
-			@declarations['method']  = nil
-			@declarations['query']   = Ore::Dictionary.new
-			@declarations['params']  = Ore::Dictionary.new
-			@declarations['headers'] = Ore::Dictionary.new
-			@declarations['body']    = nil
 		end
 	end
 
 	class Response < Scope
 		def initialize webrick_response
 			super 'Response'
-			@declarations['webrick_response'] = webrick_response
-			@declarations['status']           = 200
-			@declarations['headers']          = {}
-			@declarations['body']             = ''
 		end
 
 		def proxy_redirect to
