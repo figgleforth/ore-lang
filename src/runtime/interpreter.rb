@@ -1,7 +1,6 @@
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser, :load_standard_library,
-		              :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files
 
 		def initialize
 			@load_standard_library = true
