@@ -65,6 +65,9 @@ module Ore
 	class Global < Scope
 	end
 
+	class Temporary < Scope
+	end
+
 	class Type < Scope
 		attr_accessor :expressions, :types, :routes, :static_declarations
 

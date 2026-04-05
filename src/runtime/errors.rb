@@ -94,7 +94,7 @@ module Ore
 	end
 
 	class Invalid_Directive_Usage < Error
-		# `@ident` without
+		# todo: This is not printing anything to stdouts
 	end
 
 	class Missing_Super_Proxy_Declaration < Error

@@ -5,9 +5,9 @@ module Ore
 
 		def initialize
 			@load_standard_library = true
-			@input                 = []
-			@stack                 = []
-			@servers               = []
+			@input                 = [] # [Ore::Expression]
+			@stack                 = [] # [Ore::Scope]
+			@servers               = [] # [Ore::Server_Runner]
 			@routes                = {} # {route: Ore::Route}
 			@loaded_files          = {} # {filename: [Ore::Expression]}
 			@source_files          = {} # {filepath: String} for error reporting
@@ -35,7 +35,9 @@ module Ore
 		end
 
 		def output
-			input.each.inject(nil) { |_, expr| interpret expr }
+			input.each.inject(nil) do |_, expr|
+				interpret expr
+			end
 		end
 
 		def load_file_into_scope filepath, into_scope
@@ -85,12 +87,12 @@ module Ore
 		end
 
 		def register_source filepath, source_code
-			resolved              = filepath ? File.expand_path(filepath) : '<inline>'
+			resolved               = filepath ? File.expand_path(filepath) : '<inline>'
 			source_files[resolved] = source_code.lines.map(&:chomp)
 		end
 
 		def add_onclick_handler handler
-			key                  = handler.hash
+			key                   = handler.hash
 			onclick_handlers[key] = handler
 			key
 		end
@@ -174,7 +176,7 @@ module Ore
 			end
 		end
 
-		def check_dot_access_permissions scope, ident, expr
+		def check_dot_access_permissions! scope, ident, expr
 			binding = Ore.binding_of_ident scope, ident
 			privacy = Ore.privacy_of_ident ident
 
@@ -449,7 +451,7 @@ module Ore
 				receiver = interpret expr.left.left
 				property = expr.left.right
 
-				check_dot_access_permissions receiver, property.value, expr
+				check_dot_access_permissions! receiver, property.value, expr
 
 				right_value              = interpret expr.right
 				receiver[property.value] = right_value
@@ -488,12 +490,6 @@ module Ore
 				assignment_scope.static_declarations.add expr.left.value.to_s
 			end
 
-			# If assigning to a Type via @cd, also append to its expressions so future instances inherit it
-			if assignment_scope.is_a?(Ore::Type) && cd_scopes.include?(assignment_scope)
-				assignment_scope.expressions ||= []
-				assignment_scope.expressions << expr
-			end
-
 			return right_value
 		end
 
@@ -521,7 +517,7 @@ module Ore
 					raise Ore::Invalid_Dot_Infix_Right_Operand.new(expr.right, self)
 				end
 
-				check_dot_access_permissions receiver, expr.right.value, expr
+				check_dot_access_permissions! receiver, expr.right.value, expr
 
 				push_scope receiver
 				result = interpret expr.right
@@ -602,7 +598,7 @@ module Ore
 			raise Ore::Invalid_Dot_Infix_Left_Operand.new(expr, self) if scope.nil?
 			raise Ore::Invalid_Dot_Infix_Right_Operand.new(expr.right, self) unless expr.right.instance_of? Ore::Identifier_Expr
 
-			check_dot_access_permissions scope, expr.right.value, expr
+			check_dot_access_permissions! scope, expr.right.value, expr
 
 			push_scope scope
 			result = interpret expr.right
@@ -1521,16 +1517,22 @@ module Ore
 				database.create_connection!
 				database
 
-			when 'cd' # This is potentially destructive, you have write access to the scope
-				target = interpret expr.expression
-				if expr.expression.value == '..'
+			when 'cd'
+				# note: This used to be destructive, the target was pushed directly on the stack. Now it's a sibling of a Temporary scope that is put on the stack. And because it's a sibling scope, it is read-only and therefore nondestructive.
+				if expr.expression&.value == '..'
 					popped = pop_scope
+					raise unless popped.is_a? Ore::Temporary
 					cd_scopes.delete popped
-				elsif target
-					push_scope target
-					cd_scopes.add target
+				else
+					target = interpret expr.expression
+					if target
+						scope = Ore::Temporary.new target.name
+						scope.sibling_scopes << target
+						cd_scopes.add target
+					else
+						raise Ore::Invalid_Directive_Usage.new(expr, self)
+					end
 				end
-
 			when Ore::IMPORT_FILE_DIRECTIVE
 				# Standalone load is interpreted into current scope by passing the scope into runtime#load_file
 				filepath = interpret expr.expression
