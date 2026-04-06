@@ -20,9 +20,7 @@ module Ore
 			if @stack.empty?
 				global = Global.new
 				if load_standard_library
-					temp                       = Interpreter.new
-					temp.load_standard_library = false
-					temp.load_file_into_scope STANDARD_LIBRARY_PATH, global
+					load_file_into_scope STANDARD_LIBRARY_PATH, global
 				end
 				@stack << global
 			end
@@ -1572,7 +1570,7 @@ module Ore
 				when 'stop'
 					throw :stop
 				end
-				
+
 			else
 				raise Ore::Interpret_Expr_Not_Implemented.new(expr, self)
 			end
