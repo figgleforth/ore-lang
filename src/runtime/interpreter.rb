@@ -1446,7 +1446,8 @@ module Ore
 				database
 
 			when 'cd'
-				# note: This used to be destructive, the target was pushed directly on the stack. Now it's a sibling of a Temporary scope that is put on the stack. And because it's a sibling scope, it is read-only and therefore nondestructive.
+				# note: This used to be destructive, the target was pushed directly on the stack. Now it's a sibling of a Temporary scope on the stack. And because it's a sibling scope, it is read-only and therefore nondestructive.
+				# todo: Double check that sibling scopes are read-only lol
 				if expr.expression&.value == '..'
 					popped = pop_scope
 					raise unless popped.is_a? Ore::Temporary
