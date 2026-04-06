@@ -36,6 +36,8 @@ module Ore
 			end
 		end
 
+		# Preserves its @input, interprets given file, then restores its @input.
+		# @return The output of the interpreted file
 		def load_file_into_scope filepath, into_scope
 			resolved_path = if filepath.start_with? 'ore/'
 				File.join ROOT_PATH, filepath
