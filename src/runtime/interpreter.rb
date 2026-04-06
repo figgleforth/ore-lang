@@ -1120,7 +1120,7 @@ module Ore
 
 			# Store route in the enclosing Type's @routes if it has one (e.g., Server)
 			enclosing_type = stack.reverse.find do |scope|
-				scope.is_a?(Ore::Type) || scope.is_a?(Ore::Server)
+				scope.is_a? Ore::Type # note: You could have an instance on the stack, or an empty scope, whatever.
 			end
 			if enclosing_type
 				enclosing_type.routes            ||= {}
