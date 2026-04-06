@@ -1498,6 +1498,7 @@ module Ore
 			end
 		end
 
+		# note: This is the entry point for all expressions. This is called in a loop until all expressions are evaluated, or the program crashes.
 		def interpret expr
 			case expr
 			when Ore::Number_Expr, Ore::Symbol_Expr
@@ -1525,7 +1526,7 @@ module Ore
 				interp_prefix expr
 
 			when Ore::Nil_Init_Expr
-				# This is a special infix expression `<ident>,` where left is assigned nil if it doesn't exist, or is returned if it does
+				# This is a special infix expression `<ident>,` that desugars to `ident = ident or nil`. left is assigned nil if it doesn't exist, or is returned if it does
 				interp_nil_init expr
 
 			when Ore::Infix_Expr
@@ -1571,12 +1572,7 @@ module Ore
 				when 'stop'
 					throw :stop
 				end
-			when nil
-				# when ::Array
-				# 	# todo: I'm not sure if this should go here, but it seems fitting in case I want to interpret multiple expressions
-				# 	expr.each do |expr|
-				# 		interpret expr
-				# 	end
+				
 			else
 				raise Ore::Interpret_Expr_Not_Implemented.new(expr, self)
 			end
