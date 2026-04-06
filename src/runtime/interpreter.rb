@@ -1307,33 +1307,31 @@ module Ore
 				result    = nil
 				condition = interpret expr.condition
 
-				index = 0
-				if expr.type.value == 'until'
-					catch :stop do
-						until condition == true
-							catch :skip do
-								index += 1
-								stack.last.declare 'at', index
+				index           = 0
+				on_skip_handler = Proc.new do
+					index += 1
+					stack.last.declare 'at', index
 
-								expr.when_true.each do |stmt|
-									result = interpret(stmt)
-								end
-							end
-							condition = interpret(expr.condition)
-						end
+					expr.when_true.each do |stmt|
+						result = interpret(stmt)
 					end
-				else
-					catch :stop do
-						while condition == true
-							catch :skip do
-								index += 1
-								stack.last.declare 'at', index
+				end
 
-								expr.when_true.each do |stmt|
-									result = interpret(stmt)
-								end
-							end
-							condition = interpret(expr.condition)
+				iteration_proc = Proc.new do
+					catch :skip do
+						on_skip_handler.call
+					end
+					condition = interpret(expr.condition)
+				end
+
+				catch :stop do
+					if expr.type.value == 'until'
+						until condition == true
+							iteration_proc.call
+						end
+					else
+						while condition == true
+							iteration_proc.call
 						end
 					end
 				end
