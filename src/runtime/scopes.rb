@@ -227,12 +227,12 @@ module Ore
 		end
 
 		def [] key
-			dict[key] || declarations[key]
+			dict[key.to_sym] || declarations[key.to_sym]
 		end
 
 		def []= key, value
-			dict[key]         = value
-			declarations[key] = value
+			dict[key.to_sym]         = value
+			declarations[key.to_sym] = value
 		end
 
 		def == other

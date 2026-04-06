@@ -431,10 +431,10 @@ class Interpreter_Test < Base_Test
 		assert_equal [nil, 4815], out.values
 	end
 
-	def test_dictionary_subscript_string_and_symbol_are_different
+	def test_dictionary_subscript_string_and_symbol_do_not_behave_differently
 		out = Ore.interp "dict = {x=4815}
 		(dict['x'], dict[:x])"
-		assert_equal [nil, 4815], out.values
+		assert_equal [4815, 4815], out.values
 	end
 
 	def test_too_many_dictionary_subscript_arguments
