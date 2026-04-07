@@ -3,7 +3,7 @@ require 'cgi'
 require 'json'
 
 module Ore
-	class Server_Runner
+	class User_Server
 		DEFAULT_PORT = 8080
 
 		attr_accessor :server_instance, :interpreter, :port, :routes, :webrick_server, :server_thread
@@ -55,7 +55,7 @@ module Ore
 		end
 
 		# @param request [WEBrick::HTTPRequest, WEBrick::HTTPResponse]
-		def handle_request request, response, routes
+		def handle_request request, response
 			path_string  = request.path
 			query_string = request.query_string
 			http_method  = request.request_method.downcase
@@ -69,7 +69,7 @@ module Ore
 				req_info = req_info.prepend Ascii.green
 			end
 
-			req_info << Ascii.dim(http_method.upcase.rjust(7, ' '))
+			req_info << Ascii.dim(http_method.upcase.rjust(7, " "))
 			req_info << " "
 			req_info << Ascii.reset(path_string.gsub("/", "#{Ascii.dim('/')}#{Ascii.reset}"))
 
@@ -88,31 +88,21 @@ module Ore
 						# Update input element values from the request body
 						if request.body && !request.body.empty?
 							json_body = JSON.parse request.body rescue {}
-							inputs    = json_body['inputs'] || {}
+							inputs = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
 								input_instance = interpreter.input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
 							end
 						end
 
-						# Push the proper scope chain (instance, type, and function scopes)
-						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
-							type = handler.enclosing_scope.enclosing_scope
-							interpreter.push_scope type.enclosing_scope if type.enclosing_scope
-							interpreter.push_scope type
-						end
-						interpreter.push_scope handler.enclosing_scope
-						interpreter.push_scope handler
-						result = handler.expressions.map { |e| interpreter.interpret e }.last
+						route             = Ore::Route.new
+						route.handler     = handler
+						route.param_names = []
 
-						# Pop scopes in reverse order
-						interpreter.pop_scope # handler
-						interpreter.pop_scope # enclosing_scope
-						if handler.enclosing_scope.is_a?(Ore::Instance) && handler.enclosing_scope.enclosing_scope
-							type = handler.enclosing_scope.enclosing_scope
-							interpreter.pop_scope # type
-							interpreter.pop_scope if type.enclosing_scope
-						end
+						req = build_ore_request path_string, http_method, body_hash, parse_query_string(query_string), {}, headers_hash
+						res = build_ore_response response
+
+						interpreter.interp_route_handler route, req, res
 
 						# Do something with the result
 						component = handler.enclosing_scope
@@ -146,8 +136,8 @@ module Ore
 			if cookie = request.cookies.find { _1.name == BROWSER_VIEW_SIZE }
 				parts = cookie.value.split 'x'
 				size  = {
-					  width:  parts[0].to_i,
-					  height: parts[1].to_i
+					width:  parts[0].to_i,
+					height: parts[1].to_i
 				}
 				# This declares `browser_view_size` in the current scope, which should be the route handler?
 				# todo: A better way to store this information, and make it accessible at runtime. Some
@@ -160,29 +150,10 @@ module Ore
 				url_params   = extract_url_params path_parts, route_function
 				query_params = parse_query_string query_string
 
-				req = Ore::Request.new
-				interpreter.link_instance_to_type req, 'Request'
-
-				body_dict    = Ore::Dictionary.new body_hash
-				query_dict   = Ore::Dictionary.new query_params
-				params_dict  = Ore::Dictionary.new url_params
-				headers_dict = Ore::Dictionary.new headers_hash
-				interpreter.link_instance_to_type body_dict, 'Dictionary'
-				interpreter.link_instance_to_type query_dict, 'Dictionary'
-				interpreter.link_instance_to_type params_dict, 'Dictionary'
-				interpreter.link_instance_to_type headers_dict, 'Dictionary'
-
-				req.declarations['path']              = path_string
-				req.declarations['method']            = http_method
-				req.declarations['query']             = query_dict
-				req.declarations['params']            = params_dict
-				req.declarations['headers']           = headers_dict
-				req.declarations['body']              = body_dict
-				req.declarations['body'].declarations = body_hash
+				req = build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
 
 				begin
-					res = Ore::Response.new response
-					interpreter.link_instance_to_type res, 'Response'
+					res = build_ore_response response
 
 					# The route handler could return Html|Dom, Body|Dom etc, or even just a string. Sounds like I have to make sure the format of the final Html is correct
 					result = interpreter.interp_route_handler route_function, req, res, url_params, server_instance: @server_instance
@@ -192,7 +163,6 @@ module Ore
 					response.body   = res.declarations['body']
 					headers_hash    = res.declarations['headers']
 					headers_hash.each { |k, v| response.header[k] = v }
-					Time
 
 					# note: WEBrick (or the browser) automatically include html and head elements if the response does not
 					if response.body.to_s =~ /<html|<body|<head/i
@@ -260,14 +230,14 @@ module Ore
 			# This receives requests from dom.js
 			webrick_server.mount_proc '/onclick/' do |req, res|
 				puts Ascii.dim "▓▒░ #{'DOM'.rjust(7, ' ')} #{req.path}"
-				handle_request req, res, @routes
+				handle_request req, res
 				# todo: Old handlers accumulate if you navigate away, since they stay in memory, maybe some unmount process
 				# todo: A way to deregister handlers when a component is no longer rendered
 			end
 
 			# This receives the rest of the requests
 			webrick_server.mount_proc '' do |req, res|
-				handle_request req, res, @routes
+				handle_request req, res
 			end
 
 			@server_thread = Thread.new do
@@ -277,18 +247,40 @@ module Ore
 			server_thread
 		end
 
+		def build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
+			req          = Ore::Request.new
+			body_dict    = Ore::Dictionary.new body_hash
+			query_dict   = Ore::Dictionary.new query_params
+			params_dict  = Ore::Dictionary.new url_params
+			headers_dict = Ore::Dictionary.new headers_hash
+			interpreter.link_instance_to_type req, 'Request'
+			interpreter.link_instance_to_type body_dict, 'Dictionary'
+			interpreter.link_instance_to_type query_dict, 'Dictionary'
+			interpreter.link_instance_to_type params_dict, 'Dictionary'
+			interpreter.link_instance_to_type headers_dict, 'Dictionary'
+			req.declarations['path']              = path_string
+			req.declarations['method']            = http_method
+			req.declarations['query']             = query_dict
+			req.declarations['params']            = params_dict
+			req.declarations['headers']           = headers_dict
+			req.declarations['body']              = body_dict
+			req.declarations['body'].declarations = body_hash
+			req
+		end
+
+		def build_ore_response webrick_response
+			res                                  = Ore::Response.new webrick_response
+			res.declarations['webrick_response'] = webrick_response
+			res.declarations['status']           = 200
+			res.declarations['headers']          = {}
+			res.declarations['body']             = ''
+			interpreter.link_instance_to_type res, 'Response'
+			res
+		end
+
 		def stop
 			webrick_server.shutdown if webrick_server
 			Thread.kill server_thread if server_thread
-		end
-
-		def prefixed_output output
-			req_info = Ascii.dim("▓▒░ ")
-			req_info << Ascii.dim(output.rjust(7, ' '))
-		end
-
-		def right_aligned output
-			output.rjust(7, ' ')
 		end
 	end
 end

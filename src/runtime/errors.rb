@@ -94,7 +94,7 @@ module Ore
 	end
 
 	class Invalid_Directive_Usage < Error
-		# `@ident` without
+		# todo: This is not printing anything to stdouts
 	end
 
 	class Missing_Super_Proxy_Declaration < Error
@@ -124,6 +124,22 @@ module Ore
 	end
 
 	class Type_Checking_Failed < Error
+		attr_accessor :errors
+
+		def inintialize errors
+			super
+			@errors = errors
+		end
+	end
+
+	class Type_Mismatch < Type_Checking_Failed
+		attr_accessor :declared, :inferred
+
+		def initialize expression, declared, inferred
+			@declared = declared
+			@inferred = inferred
+			super expression, nil
+		end
 	end
 
 	class Reserved_Function_Delimiter < Error

@@ -43,7 +43,7 @@ class E2E_Server_Test < Minitest::Test
 		server_instance = interpreter.run code
 
 		routes         = interpreter.collect_routes_from_instance server_instance
-		@server_runner = Ore::Server_Runner.new server_instance, interpreter, routes
+		@server_runner = Ore::User_Server.new server_instance, interpreter, routes
 		@server_runner.start
 
 		# Give server time to start
@@ -87,7 +87,7 @@ class E2E_Server_Test < Minitest::Test
 		server_instance = interpreter.run code
 
 		routes         = interpreter.collect_routes_from_instance server_instance
-		@server_runner = Ore::Server_Runner.new server_instance, interpreter, routes
+		@server_runner = Ore::User_Server.new server_instance, interpreter, routes
 		@server_runner.start
 
 		sleep 0.5
@@ -120,7 +120,7 @@ class E2E_Server_Test < Minitest::Test
 		server_instance = interpreter.run code
 
 		routes         = interpreter.collect_routes_from_instance server_instance
-		@server_runner = Ore::Server_Runner.new server_instance, interpreter, routes
+		@server_runner = Ore::User_Server.new server_instance, interpreter, routes
 		@server_runner.start
 
 		sleep 0.5
@@ -169,8 +169,8 @@ class E2E_Server_Test < Minitest::Test
 		routes_b = interpreter.collect_routes_from_instance b_instance
 
 		# Start both servers
-		@server_runner_a = Ore::Server_Runner.new a_instance, interpreter, routes_a
-		@server_runner_b = Ore::Server_Runner.new b_instance, interpreter, routes_b
+		@server_runner_a = Ore::User_Server.new a_instance, interpreter, routes_a
+		@server_runner_b = Ore::User_Server.new b_instance, interpreter, routes_b
 
 		@server_runner_a.start
 		@server_runner_b.start

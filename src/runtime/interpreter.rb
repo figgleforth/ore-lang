@@ -1,19 +1,19 @@
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser, :load_standard_library,
-		              :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :cd_scopes
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :type_check_before_interpreting
 
 		def initialize
+			@type_check_before_interpreting = true
+
 			@load_standard_library = true
-			@input                 = []
-			@stack                 = []
-			@servers               = []
+			@input                 = [] # [Ore::Expression]
+			@stack                 = [] # [Ore::Scope]
+			@servers               = [] # [Ore::User_Server]
 			@routes                = {} # {route: Ore::Route}
 			@loaded_files          = {} # {filename: [Ore::Expression]}
 			@source_files          = {} # {filepath: String} for error reporting
 			@onclick_handlers      = {} # {handler_hash: Ore::Func}
 			@input_elements        = {} # {element_hash: Ore::Instance} for inputs/textareas
-			@cd_scopes             = Set.new # Scopes pushed via @cd directive
 			@lexer                 = Lexer.new
 			@parser                = Parser.new
 		end
@@ -22,9 +22,7 @@ module Ore
 			if @stack.empty?
 				global = Global.new
 				if load_standard_library
-					temp                       = Interpreter.new
-					temp.load_standard_library = false
-					temp.load_file_into_scope STANDARD_LIBRARY_PATH, global
+					load_file_into_scope STANDARD_LIBRARY_PATH, global
 				end
 				@stack << global
 			end
@@ -35,9 +33,17 @@ module Ore
 		end
 
 		def output
-			input.each.inject(nil) { |_, expr| interpret expr }
+			if type_check_before_interpreting # todo: I don't like this being here, it should be in #run.
+				Type_Checker.new(@input).output
+			end
+
+			input.each.inject(nil) do |_, expr|
+				interpret expr
+			end
 		end
 
+		# Preserves its @input, interprets given file, then restores its @input.
+		# @return The output of the interpreted file
 		def load_file_into_scope filepath, into_scope
 			resolved_path = if filepath.start_with? 'ore/'
 				File.join ROOT_PATH, filepath
@@ -57,7 +63,7 @@ module Ore
 
 			saved  = @input
 			@input = @loaded_files[resolved_path]
-			result = output
+			result = output # note: Okay to call #output directly here
 			@input = saved
 
 			pop_scope
@@ -85,12 +91,12 @@ module Ore
 		end
 
 		def register_source filepath, source_code
-			resolved              = filepath ? File.expand_path(filepath) : '<inline>'
+			resolved               = filepath ? File.expand_path(filepath) : '<inline>'
 			source_files[resolved] = source_code.lines.map(&:chomp)
 		end
 
 		def add_onclick_handler handler
-			key                  = handler.hash
+			key                   = handler.hash
 			onclick_handlers[key] = handler
 			key
 		end
@@ -174,7 +180,23 @@ module Ore
 			end
 		end
 
-		def check_dot_access_permissions scope, ident, expr
+		def track_static_declaration scope, ident_expr
+			return unless ident_expr.is_a?(Ore::Identifier_Expr) && ident_expr.scope_operator&.value == './'
+			scope.static_declarations ||= Set.new
+			scope.static_declarations.add ident_expr.value.to_s
+		end
+
+		def find_ruby_class_for_type type
+			type.types.to_a.reverse.each do |type_name|
+				ore_name = "Ore::#{type_name}"
+				next unless Object.const_defined? ore_name
+				k = Object.const_get ore_name
+				return k if k.is_a?(Class) && k < Ore::Instance && k != Ore::Instance
+			end
+			nil
+		end
+
+		def check_dot_access_permissions! scope, ident, expr
 			binding = Ore.binding_of_ident scope, ident
 			privacy = Ore.privacy_of_ident ident
 
@@ -195,9 +217,8 @@ module Ore
 			end
 		end
 
-		# todo: Maybe this should go on Ore::Server_Runner?
 		def collect_routes_from_instance instance
-			routes = {}
+			collected_routes = {}
 
 			# This iterates composed types to find any
 			instance.types.each do |type_name|
@@ -206,11 +227,11 @@ module Ore
 
 				# Merge routes from this type
 				composed_type.routes.each do |key, route|
-					routes[key] ||= route
+					collected_routes[key] ||= route
 				end
 			end
 
-			routes
+			collected_routes
 		end
 
 		def render_dom_to_html dom_instance
@@ -449,7 +470,7 @@ module Ore
 				receiver = interpret expr.left.left
 				property = expr.left.right
 
-				check_dot_access_permissions receiver, property.value, expr
+				check_dot_access_permissions! receiver, property.value, expr
 
 				right_value              = interpret expr.right
 				receiver[property.value] = right_value
@@ -482,17 +503,7 @@ module Ore
 
 			assignment_scope.declare expr.left.value, right_value
 
-			# Track static declarations
-			if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
-				assignment_scope.static_declarations ||= Set.new
-				assignment_scope.static_declarations.add expr.left.value.to_s
-			end
-
-			# If assigning to a Type via @cd, also append to its expressions so future instances inherit it
-			if assignment_scope.is_a?(Ore::Type) && cd_scopes.include?(assignment_scope)
-				assignment_scope.expressions ||= []
-				assignment_scope.expressions << expr
-			end
+			track_static_declaration assignment_scope, expr.left
 
 			return right_value
 		end
@@ -521,7 +532,7 @@ module Ore
 					raise Ore::Invalid_Dot_Infix_Right_Operand.new(expr.right, self)
 				end
 
-				check_dot_access_permissions receiver, expr.right.value, expr
+				check_dot_access_permissions! receiver, expr.right.value, expr
 
 				push_scope receiver
 				result = interpret expr.right
@@ -602,7 +613,7 @@ module Ore
 			raise Ore::Invalid_Dot_Infix_Left_Operand.new(expr, self) if scope.nil?
 			raise Ore::Invalid_Dot_Infix_Right_Operand.new(expr.right, self) unless expr.right.instance_of? Ore::Identifier_Expr
 
-			check_dot_access_permissions scope, expr.right.value, expr
+			check_dot_access_permissions! scope, expr.right.value, expr
 
 			push_scope scope
 			result = interpret expr.right
@@ -633,11 +644,7 @@ module Ore
 				scope = scope_for_identifier(expr.left) || stack.last
 				scope.declare expr.left.value, interpret(expr.right)
 
-				# Track static declarations (same as in interp_infix_equals)
-				if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.scope_operator&.value == './'
-					scope.static_declarations ||= Set.new
-					scope.static_declarations.add expr.left.value.to_s
-				end
+				track_static_declaration scope, expr.left
 			end
 		end
 
@@ -855,36 +862,8 @@ module Ore
 			# - Delete :new from instance, no longer needed
 			#
 
-			# todo: Clean this up
-			ore_name = "Ore::#{type.name}"
-			instance = if Object.const_defined?(ore_name)
-				konstant = Object.const_get(ore_name)
-				# note: Only instantiate if it's a subclass of Instance (but not Instance itself) to exclude core runtime types like Type, Scope, Func, etc.
-				if konstant.is_a?(Class) && konstant < Ore::Instance && konstant != Ore::Instance
-					if konstant.respond_to?(:new)
-						konstant.new
-					else
-						konstant
-					end
-				else
-					Ore::Instance.new type.name
-				end
-			else
-				types               = type.types.to_a # note: Types is a set, so the #to_a lets me iterate below
-				first_composed_with = "Ore::#{types[1] || types[0]}" # note: types[0] is this type's name, fallback to itself
-
-				first_composition = if Object.const_defined? first_composed_with
-					Object.const_get first_composed_with
-				else
-					Ore::Instance
-				end
-
-				if first_composition < Ore::Instance && first_composition != Ore::Instance
-					first_composition.new
-				else
-					Ore::Instance.new type.name
-				end
-			end
+			ruby_class = find_ruby_class_for_type type
+			instance   = ruby_class ? ruby_class.new : Ore::Instance.new(type.name)
 
 			instance.name            = type.name
 			instance.types           = type.types
@@ -951,12 +930,7 @@ module Ore
 			if func.name&.value
 				stack.last.declare func.name.value, func
 
-				# Track static functions (functions defined with ..)
-				# Get the original name expression to check for scope operator
-				if expr.name.is_a?(Ore::Identifier_Expr) && expr.name.scope_operator&.value == './'
-					stack.last.static_declarations ||= Set.new
-					stack.last.static_declarations.add func.name.value
-				end
+				track_static_declaration stack.last, expr.name
 			end
 
 			func
@@ -1152,14 +1126,14 @@ module Ore
 
 			# Store route in the enclosing Type's @routes if it has one (e.g., Server)
 			enclosing_type = stack.reverse.find do |scope|
-				scope.is_a?(Ore::Type) || scope.is_a?(Ore::Server)
+				scope.is_a? Ore::Type # note: You could have an instance on the stack, or an empty scope, whatever.
 			end
 			if enclosing_type
 				enclosing_type.routes            ||= {}
 				enclosing_type.routes[route_key] = route
 			end
 
-			routes[route_key] = route
+			@routes[route_key] = route
 			stack.last.declare route_key, route
 
 			route
@@ -1294,55 +1268,25 @@ module Ore
 				# Initialize collection variables outside catch block so they persist after stop
 				collected = []
 				count_val = 0
+				chunks    = if stride
+					values.each_slice(stride).each_with_index
+				else
+					values.each_with_index
+				end
 
 				stop_value = catch :stop do
-					if stride
-						slices = values.each_slice(stride).to_a
-
+					chunks.each do |element, index|
 						case loop_type
 						when 'each'
-							slices.each_with_index do |elements, index|
-								result = iterate_body.call elements, index
-							end
+							result = iterate_body.call element, index
 						when 'map'
-							slices.each_with_index do |elements, index|
-								collected << iterate_body.call(elements, index)
-							end
+							collected << iterate_body.call(element, index)
 						when 'select'
-							slices.each_with_index do |elements, index|
-								collected << elements if truthy? iterate_body.call(elements, index)
-							end
+							collected << element if truthy? iterate_body.call(element, index)
 						when 'reject'
-							slices.each_with_index do |elements, index|
-								collected << elements unless truthy? iterate_body.call(elements, index)
-							end
+							collected << element unless truthy? iterate_body.call(element, index)
 						when 'count'
-							slices.each_with_index do |elements, index|
-								count_val += 1 if truthy? iterate_body.call(elements, index)
-							end
-						end
-					else
-						case loop_type
-						when 'each'
-							values.each_with_index do |element, index|
-								result = iterate_body.call element, index
-							end
-						when 'map'
-							values.each_with_index do |element, index|
-								collected << iterate_body.call(element, index)
-							end
-						when 'select'
-							values.each_with_index do |element, index|
-								collected << element if truthy? iterate_body.call(element, index)
-							end
-						when 'reject'
-							values.each_with_index do |element, index|
-								collected << element unless truthy? iterate_body.call(element, index)
-							end
-						when 'count'
-							values.each_with_index do |element, index|
-								count_val += 1 if truthy? iterate_body.call(element, index)
-							end
+							count_val += 1 if truthy? iterate_body.call(element, index)
 						end
 					end
 					nil
@@ -1369,33 +1313,31 @@ module Ore
 				result    = nil
 				condition = interpret expr.condition
 
-				index = 0
-				if expr.type.value == 'until'
-					catch :stop do
-						until condition == true
-							catch :skip do
-								index += 1
-								stack.last.declare 'at', index
+				index           = 0
+				on_skip_handler = Proc.new do
+					index += 1
+					stack.last.declare 'at', index
 
-								expr.when_true.each do |stmt|
-									result = interpret(stmt)
-								end
-							end
-							condition = interpret(expr.condition)
-						end
+					expr.when_true.each do |stmt|
+						result = interpret(stmt)
 					end
-				else
-					catch :stop do
-						while condition == true
-							catch :skip do
-								index += 1
-								stack.last.declare 'at', index
+				end
 
-								expr.when_true.each do |stmt|
-									result = interpret(stmt)
-								end
-							end
-							condition = interpret(expr.condition)
+				iteration_proc = Proc.new do
+					catch :skip do
+						on_skip_handler.call
+					end
+					condition = interpret(expr.condition)
+				end
+
+				catch :stop do
+					if expr.type.value == 'until'
+						until condition == true
+							iteration_proc.call
+						end
+					else
+						while condition == true
+							iteration_proc.call
 						end
 					end
 				end
@@ -1466,21 +1408,9 @@ module Ore
 
 				# note: For static proxies on Types (like Record.find), create a temporary instance of the Ruby class. This allows the proxy method to access the Type's declarations.
 				target = if instance_or_type.instance_of?(Ore::Type) && instance_or_type.name
-					# Check all types in the composition to find a matching Ruby class
-					matching_class = nil
-					instance_or_type.types.to_a.reverse.each do |type_name|
-						ore_class_name = "Ore::#{type_name}"
-						if Object.const_defined?(ore_class_name)
-							konstant = Object.const_get ore_class_name
-							if konstant.is_a?(Class) && konstant < Ore::Instance
-								matching_class = konstant
-								break
-							end
-						end
-					end
-
-					if matching_class
-						temp_instance              = matching_class.new instance_or_type.name
+					ruby_class = find_ruby_class_for_type instance_or_type
+					if ruby_class
+						temp_instance              = ruby_class.new instance_or_type.name
 						temp_instance.declarations = instance_or_type.declarations
 						# todo: Do static_declarations need to be copied over?
 						temp_instance
@@ -1510,27 +1440,32 @@ module Ore
 					raise Ore::Invalid_Start_Directive_Argument.new(expr, self)
 				end
 
-				routes        = collect_routes_from_instance server_instance
-				server_runner = Ore::Server_Runner.new server_instance, self, routes
-				servers << server_runner
+				collected_routes = collect_routes_from_instance server_instance
+				user_server      = Ore::User_Server.new server_instance, self, collected_routes
+				servers << user_server
 
-				server_runner.start
-				server_runner
+				user_server.start
+				user_server
 			when 'connect'
 				database = interpret expr.expression
 				database.create_connection!
 				database
 
-			when 'cd' # This is potentially destructive, you have write access to the scope
-				target = interpret expr.expression
-				if expr.expression.value == '..'
+			when 'cd'
+				# note: This used to be destructive, the target was pushed directly on the stack. Now it's a sibling of a Temporary scope on the stack. And because it's a sibling scope, it is read-only and therefore nondestructive.
+				# todo: Double check that sibling scopes are read-only lol
+				if expr.expression&.value == '..'
 					popped = pop_scope
-					cd_scopes.delete popped
-				elsif target
-					push_scope target
-					cd_scopes.add target
+					raise unless popped.is_a? Ore::Temporary
+				else
+					target = interpret expr.expression
+					if target
+						scope = Ore::Temporary.new target.name
+						scope.sibling_scopes << target
+					else
+						raise Ore::Invalid_Directive_Usage.new(expr, self)
+					end
 				end
-
 			when Ore::IMPORT_FILE_DIRECTIVE
 				# Standalone load is interpreted into current scope by passing the scope into runtime#load_file
 				filepath = interpret expr.expression
@@ -1568,6 +1503,7 @@ module Ore
 			end
 		end
 
+		# note: This is the entry point for all expressions. This is called in a loop until all expressions are evaluated, or the program crashes.
 		def interpret expr
 			case expr
 			when Ore::Number_Expr, Ore::Symbol_Expr
@@ -1595,7 +1531,7 @@ module Ore
 				interp_prefix expr
 
 			when Ore::Nil_Init_Expr
-				# This is a special infix expression `<ident>,` where left is assigned nil if it doesn't exist, or is returned if it does
+				# This is a special infix expression `<ident>,` that desugars to `ident = ident or nil`. left is assigned nil if it doesn't exist, or is returned if it does
 				interp_nil_init expr
 
 			when Ore::Infix_Expr
@@ -1641,12 +1577,7 @@ module Ore
 				when 'stop'
 					throw :stop
 				end
-			when nil
-				# when ::Array
-				# 	# todo: I'm not sure if this should go here, but it seems fitting in case I want to interpret multiple expressions
-				# 	expr.each do |expr|
-				# 		interpret expr
-				# 	end
+
 			else
 				raise Ore::Interpret_Expr_Not_Implemented.new(expr, self)
 			end

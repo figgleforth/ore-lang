@@ -22,7 +22,7 @@ module Ore
 
 			define_singleton_method name do |str = nil|
 				return (enabled? ? code : "") if str.nil?
-				enabled? ? "#{code}#{str}#{RESET}" : str
+				enabled? ? "#{code}#{str}#{RESET}" : +str
 			end
 		end
 

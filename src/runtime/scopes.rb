@@ -65,6 +65,9 @@ module Ore
 	class Global < Scope
 	end
 
+	class Temporary < Scope
+	end
+
 	class Type < Scope
 		attr_accessor :expressions, :types, :routes, :static_declarations
 
@@ -91,15 +94,6 @@ module Ore
 
 	class Route < Func
 		attr_accessor :http_method, :path, :handler, :parts, :param_names
-	end
-
-	class Return < Scope
-		attr_accessor :value
-
-		def initialize value
-			super 'Return'
-			@value = value
-		end
 	end
 
 	class String < Instance
@@ -233,12 +227,12 @@ module Ore
 		end
 
 		def [] key
-			dict[key] || declarations[key]
+			dict[key.to_sym] || declarations[key.to_sym]
 		end
 
 		def []= key, value
-			dict[key]         = value
-			declarations[key] = value
+			dict[key.to_sym]         = value
+			declarations[key.to_sym] = value
 		end
 
 		def == other
@@ -379,22 +373,12 @@ module Ore
 	class Request < Scope
 		def initialize
 			super 'Request'
-			@declarations['path']    = nil
-			@declarations['method']  = nil
-			@declarations['query']   = Ore::Dictionary.new
-			@declarations['params']  = Ore::Dictionary.new
-			@declarations['headers'] = Ore::Dictionary.new
-			@declarations['body']    = nil
 		end
 	end
 
 	class Response < Scope
 		def initialize webrick_response
 			super 'Response'
-			@declarations['webrick_response'] = webrick_response
-			@declarations['status']           = 200
-			@declarations['headers']          = {}
-			@declarations['body']             = ''
 		end
 
 		def proxy_redirect to

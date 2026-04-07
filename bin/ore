@@ -4,27 +4,29 @@ require_relative '../src/ore'
 
 INSTRUCTIONS = <<~INST
     Usage:
-        ore <file>                  Execute code file
-        ore [command]               Run command
+        bundle exec bin/ore <file>          Execute code file
+        bundle exec bin/ore [command]       Run command
 
     COMMANDS:
-        lex <code>                  Show lexer tokens for code
-        lexf <file>                 Show lexer tokens for file
+        run <file>            Execute file and keep running until interrupt (no hot-reload)
 
-        parse <code>                Show AST for code
-        parsef <file>               Show AST for file
+        interp <code>         Execute code string
+        interpf <file>        Execute file
 
-        interp <code>               Execute code string
-        interpf <file>              Execute file
+        parse <code>          Show AST for code
+        parsef <file>         Show AST for file
 
-        -v | --version              Show version number
-        -h | --help                 Show help instructions
+        lex <code>            Show lexer tokens for code
+        lexf <file>           Show lexer tokens for file
+
+        -v | --version        Show version number
+        -h | --help           Show help instructions
 
     EXAMPLES:
-        ore myapp.ore
+        ore examples/hello.ore
         ore lex "x = 5 + 3"
-        ore parsef test.ore
-        ore interp myapp.ore
+        ore parsef examples/hello.ore
+        ore interp "4815"
 INST
 
 if ARGV.empty?
@@ -56,9 +58,11 @@ begin
 		pp Ore.interp ARGV[1], load_standard_library: false
 	when 'interpf-nostd'
 		pp Ore.interp_file ARGV[1], load_standard_library: false
+	when 'run'
+		pp Ore.interp_file_with_hot_reload ARGV[1]
 	else
 		if ARGV[0]
-			Ore.interp_file_with_hot_reload ARGV[0]
+			pp Ore.interp_file ARGV[0]
 		else
 			puts "Error: No file specified.\n#{INSTRUCTIONS}"
 			exit 1

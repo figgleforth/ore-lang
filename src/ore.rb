@@ -3,7 +3,7 @@ require_relative 'shared/helpers'
 require_relative 'shared/ascii'
 require_relative 'shared/super_proxies'
 
-require_relative 'systems/server_runner'
+require_relative 'systems/user_server'
 require_relative 'systems/dom_renderer'
 
 # Compile-time (source to AST)
@@ -17,6 +17,7 @@ require_relative 'compiler/type_checker'
 # Runtime (AST to execution)
 require_relative 'runtime/errors'
 require_relative 'runtime/scopes'
+require_relative 'runtime/return'
 require_relative 'runtime/interpreter'
 
 module Ore
