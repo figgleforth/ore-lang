@@ -53,18 +53,19 @@ bundle install
 
 ## Architecture
 
-Three phases: **Lexer → Parser → Interpreter**
+Four phases: **Lexer → Parser → Type Checker → Interpreter**
 
-`Interpreter` is the main entry point. It owns a `Lexer` and `Parser`, and exposes `run(source_code)` which drives all three phases. `Lexer` and `Parser` are plain transformation classes you can also call directly.
+`Interpreter` is the main entry point. It owns a `Lexer` and `Parser`, and exposes `run(source_code)` which drives all phases. `Lexer` and `Parser` are plain transformation classes you can also call directly.
 
 ### Compile-time (src/compiler/)
 
-Source code is tokenized and parsed into an Abstract Syntax Tree (AST):
+Source code is tokenized, parsed into an AST, and statically type checked:
 
 - `lexer.rb` - Tokenizes source code into lexemes (tokens)
 - `parser.rb` - Parses lexemes into an AST of expression objects
 - `lexeme.rb` - Token representation
 - `expressions.rb` - AST node definitions
+- `type_checker.rb` - Static type checker; runs on the AST before interpretation
 
 ### Runtime (src/runtime/)
 
@@ -98,6 +99,44 @@ The AST is executed to produce output:
 
 - `ore/preload.ore` - Auto-loaded into the global scope when `load_standard_library` is `true` (default)
 - Standard library path defined in `Ore::STANDARD_LIBRARY_PATH`
+
+## Type Checker
+
+The type checker (`src/compiler/type_checker.rb`) runs between the parser and interpreter. It is invoked from `Interpreter#output` before the execution loop, so it also runs on files loaded via `@use`.
+
+### What it checks
+
+- **Typed variable assignments** — `x: String = 123` raises `Type_Mismatch` (literal RHS only)
+- **Typed function parameter defaults** — `go { x: Number = 'bad'; x }` raises at the param default
+- **Call site argument types** — `add(1, 'oops')` raises if `add` has typed params and the arg is a known literal
+
+Annotations whose RHS is non-literal (an identifier, a function call, etc.) are silently skipped — only literal mismatches are caught statically.
+
+### How it works
+
+`Type_Checker` has two core methods:
+
+- `infer_type(expr)` — maps an expression to an Ore type name string (`'String'`, `'Number'`, `'Symbol'`), or looks up `Identifier_Expr` values in `@types_by_identifier`. Returns `nil` if unknown.
+- `check(expr)` — recursive dispatcher; returns `nil` (no error) or a `Type_Mismatch` error. Recurses into all child-bearing expression types.
+
+`@types_by_identifier` is a hash built during the walk:
+- Typed assignments (`x: String = ...`) register `'x' => 'String'`
+- Named functions with typed params (`add { a: Number; ... }`) register `'add' => ['Number', 'Number']` via `register_func`
+
+Call site checking happens in `check_call` — it looks up the receiver name in `@types_by_identifier`, retrieves the param type array, and compares each literal argument's inferred type against the expected type.
+
+### Important gotcha
+
+`Type_Checker` lives inside `module Ore`. Bare `Array` inside the module resolves to `Ore::Array` (the built-in scope type), not Ruby's `::Array`. Always use `::Array` when checking Ruby array types (e.g. `signature.is_a? ::Array`).
+
+### Known limitation
+
+Call sites that appear before the function definition are not checked — the signature isn't registered yet when the call is encountered. This is a known limitation; a two-pass approach would fix it.
+
+### Errors
+
+- `Ore::Type_Mismatch < Ore::Type_Checking_Failed` — carries `expression`, `declared`, and `inferred`
+- `Ore::Type_Checking_Failed` — raised by `output` if any errors were collected
 
 ## Scope System
 

@@ -36,6 +36,7 @@ Greet('Ore').greeting()
 
 - [Features](#features)
 - [Code Examples](#code-examples)
+	- [Type Annotations](#type-annotations)
 	- [Variables](#variables)
 	- [Functions](#functions)
 	- [Classes](#classes)
@@ -49,6 +50,12 @@ Greet('Ore').greeting()
 
 ### Features
 
+- Static type checking at parse time
+	- Type annotations on variables: `x: String = 'hello'`
+	- Type annotations on function parameters: `add { a: Number, b: Number; a + b }`
+	- Type annotations on function return values: `add: Number { a: Number, b: Number; a + b }`
+	- Mismatches caught before execution for literal values
+	- Call site argument types checked against function signatures
 - Naming conventions replace keywords
 	- `Capitalize` classes
 	- `lowercase` variables and functions
@@ -93,6 +100,32 @@ Greet('Ore').greeting()
 	- Standard library provides common HTML elements
 
 ### Code Examples
+
+#### Type Annotations
+
+Type annotations use `: TypeName` syntax on variables, function parameters, and function return values. Mismatches with literal values are caught before the program runs.
+
+```ore
+# Variable annotations
+x: String = 'hello'   # ok
+y: Number = 42        # ok
+z: String = 99        # Type_Checking_Failed — String expected, Number given
+
+# Parameter annotations
+add { a: Number, b: Number;
+	a + b
+}
+
+add(1, 2)      # ok
+add(1, 'two')  # Type_Checking_Failed — Number expected for b, String given
+
+# Return type annotation
+add: Number { a: Number, b: Number;
+	a + b
+}
+```
+
+Annotations on variables whose values aren't known statically (e.g. the result of a function call or another identifier) are not checked at parse time — only literal mismatches are caught.
 
 #### Variables
 
