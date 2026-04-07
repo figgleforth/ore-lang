@@ -1,8 +1,10 @@
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :type_check_before_interpreting
 
 		def initialize
+			@type_check_before_interpreting = true
+
 			@load_standard_library = true
 			@input                 = [] # [Ore::Expression]
 			@stack                 = [] # [Ore::Scope]
@@ -31,6 +33,10 @@ module Ore
 		end
 
 		def output
+			if type_check_before_interpreting # todo: I don't like this being here, it should be in #run.
+				Type_Checker.new(@input).output
+			end
+
 			input.each.inject(nil) do |_, expr|
 				interpret expr
 			end
@@ -57,7 +63,7 @@ module Ore
 
 			saved  = @input
 			@input = @loaded_files[resolved_path]
-			result = output
+			result = output # note: Okay to call #output directly here
 			@input = saved
 
 			pop_scope
