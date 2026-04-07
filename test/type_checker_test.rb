@@ -115,4 +115,48 @@ class Type_Checker_Test < Base_Test
 	def test_mismatch_inside_prefix_expression
 		assert_type_error { Ore.interp "!(x: Number = 'bad')" }
 	end
+
+	# --- Call site argument type checking ---
+
+	def test_call_site_string_arg_where_number_expected
+		assert_type_error { Ore.interp "add { a: Number, b: Number; a + b }, add(1, 'oops')" }
+	end
+
+	def test_call_site_number_arg_where_string_expected
+		assert_type_error { Ore.interp "greet { name: String; name }, greet(42)" }
+	end
+
+	def test_call_site_symbol_arg_where_number_expected
+		assert_type_error { Ore.interp "double { x: Number; x + x }, double(:bad)" }
+	end
+
+	def test_call_site_correct_args_passes
+		refute_type_error { Ore.interp "add { a: Number, b: Number; a + b }, add(1, 2)" }
+	end
+
+	def test_call_site_correct_string_arg_passes
+		refute_type_error { Ore.interp "greet { name: String; name }, greet('hello')" }
+	end
+
+	def test_call_site_unknown_arg_is_skipped
+		# Identifier arg — type unknown statically, no error
+		refute_type_error { Ore.interp "x = 'oops', add { a: Number; a }, add(x)" }
+	end
+
+	def test_call_site_only_typed_params_are_checked
+		# Second param has no type annotation — should not error
+		refute_type_error { Ore.interp "add { a: Number, b; a }, add(1, 'anything')" }
+	end
+
+	def test_call_site_first_arg_mismatch_caught
+		assert_type_error { Ore.interp "add { a: Number, b: Number; a + b }, add('bad', 2)" }
+	end
+
+	def test_call_before_func_definition_raises_runtime_error_not_type_error
+		# Call appears before definition — type checker can't see the signature yet,
+		# so no Type_Checking_Failed. The interpreter raises Undeclared_Identifier instead.
+		assert_raises Ore::Undeclared_Identifier do
+			Ore.interp "add(1, 'oops'), add { a: Number, b: Number; a + b }"
+		end
+	end
 end
