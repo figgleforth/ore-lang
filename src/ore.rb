@@ -19,6 +19,7 @@ require_relative 'runtime/errors'
 require_relative 'runtime/scopes'
 require_relative 'runtime/return'
 require_relative 'runtime/interpreter'
+require_relative 'runtime/repl'
 
 module Ore
 	ROOT_PATH             = File.expand_path('../', __dir__)

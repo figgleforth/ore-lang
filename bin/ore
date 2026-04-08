@@ -9,6 +9,7 @@ INSTRUCTIONS = <<~INST
 
     COMMANDS:
         run <file>            Execute file and keep running until interrupt (no hot-reload)
+        repl                  Enter repl mode, type code press enter
 
         interp <code>         Execute code string
         interpf <file>        Execute file
@@ -42,6 +43,8 @@ begin
 	when '-h', '--help'
 		puts INSTRUCTIONS
 		exit 0
+	when 'repl'
+		Ore::REPL.new.run
 	when 'lex'
 		pp Ore.lex ARGV[1]
 	when 'parse'
