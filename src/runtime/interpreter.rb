@@ -1,10 +1,8 @@
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :type_check_before_interpreting
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files
 
 		def initialize
-			@type_check_before_interpreting = true
-
 			@load_standard_library = true
 			@input                 = [] # [Ore::Expression]
 			@stack                 = [] # [Ore::Scope]
@@ -27,16 +25,12 @@ module Ore
 				@stack << global
 			end
 			@lexer.input  = source_code
-			@parser.input = @lexer.output
-			@input        = @parser.output
+			@parser.input = @lexer.output # Tokens
+			@input        = @parser.output # Expressions
 			output
 		end
 
 		def output
-			if type_check_before_interpreting # todo: I don't like this being here, it should be in #run.
-				Type_Checker.new(@input).output
-			end
-
 			input.each.inject(nil) do |_, expr|
 				interpret expr
 			end

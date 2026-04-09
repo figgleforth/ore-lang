@@ -115,4 +115,16 @@ module Ore
 	def self.lex_file filepath
 		Lexer.new(File.read(filepath)).output
 	end
+
+	def self.type_check_file filepath
+		self.type_check File.read(filepath)
+	end
+
+	def self.type_check source
+		expressions = Ore.parse source
+		checker     = Ore::Type_Checker.new expressions
+		if checker.output
+			raise checker.output
+		end
+	end
 end
