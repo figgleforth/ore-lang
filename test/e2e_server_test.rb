@@ -10,10 +10,9 @@ class E2E_Server_Test < Minitest::Test
 	end
 
 	def teardown
-		# Cleanup any running servers
-		if @server_runner
-			@server_runner.stop
-			sleep 0.1 # Give server time to shutdown
+		if @server_runner && @interpreter
+			@interpreter.stop_server @server_runner
+			sleep 0.1
 		end
 	end
 
@@ -39,15 +38,14 @@ class E2E_Server_Test < Minitest::Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new
-		server_instance = interpreter.run code
+		@interpreter    = Ore::Interpreter.new
+		server_instance = @interpreter.run code
 
-		routes         = interpreter.collect_routes_from_instance server_instance
-		@server_runner = Ore::User_Server.new server_instance, interpreter, routes
-		@server_runner.start
-
-		# Give server time to start
-		sleep 0.5
+		@server_runner                 = Ore::Server.new
+		@server_runner.server_instance = server_instance
+		@server_runner.port            = Integer(server_instance.get(:port) || Ore::Server::DEFAULT_PORT)
+		@server_runner.routes          = @interpreter.collect_routes_from_instance server_instance
+		@interpreter.start_server @server_runner
 
 		# Test GET /
 		response = Net::HTTP.get_response URI("http://localhost:#{@port}/")
@@ -83,14 +81,14 @@ class E2E_Server_Test < Minitest::Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new
-		server_instance = interpreter.run code
+		@interpreter    = Ore::Interpreter.new
+		server_instance = @interpreter.run code
 
-		routes         = interpreter.collect_routes_from_instance server_instance
-		@server_runner = Ore::User_Server.new server_instance, interpreter, routes
-		@server_runner.start
-
-		sleep 0.5
+		@server_runner                 = Ore::Server.new
+		@server_runner.server_instance = server_instance
+		@server_runner.port            = Integer(server_instance.get(:port) || Ore::Server::DEFAULT_PORT)
+		@server_runner.routes          = @interpreter.collect_routes_from_instance server_instance
+		@interpreter.start_server @server_runner
 
 		response = Net::HTTP.get_response URI("http://localhost:#{@port}/search?q=test&page=1")
 		assert_equal '200', response.code
@@ -116,14 +114,14 @@ class E2E_Server_Test < Minitest::Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new
-		server_instance = interpreter.run code
+		@interpreter    = Ore::Interpreter.new
+		server_instance = @interpreter.run code
 
-		routes         = interpreter.collect_routes_from_instance server_instance
-		@server_runner = Ore::User_Server.new server_instance, interpreter, routes
-		@server_runner.start
-
-		sleep 0.5
+		@server_runner                 = Ore::Server.new
+		@server_runner.server_instance = server_instance
+		@server_runner.port            = Integer(server_instance.get(:port) || Ore::Server::DEFAULT_PORT)
+		@server_runner.routes          = @interpreter.collect_routes_from_instance server_instance
+		@interpreter.start_server @server_runner
 
 		uri      = URI("http://localhost:#{@port}/submit")
 		response = Net::HTTP.post_form uri, {}
@@ -168,14 +166,18 @@ class E2E_Server_Test < Minitest::Test
 		routes_a = interpreter.collect_routes_from_instance a_instance
 		routes_b = interpreter.collect_routes_from_instance b_instance
 
-		# Start both servers
-		@server_runner_a = Ore::User_Server.new a_instance, interpreter, routes_a
-		@server_runner_b = Ore::User_Server.new b_instance, interpreter, routes_b
+		@server_runner_a                 = Ore::Server.new
+		@server_runner_a.server_instance = a_instance
+		@server_runner_a.port            = Integer(a_instance.get(:port) || Ore::Server::DEFAULT_PORT)
+		@server_runner_a.routes          = routes_a
 
-		@server_runner_a.start
-		@server_runner_b.start
+		@server_runner_b                 = Ore::Server.new
+		@server_runner_b.server_instance = b_instance
+		@server_runner_b.port            = Integer(b_instance.get(:port) || Ore::Server::DEFAULT_PORT)
+		@server_runner_b.routes          = routes_b
 
-		sleep 0.5
+		interpreter.start_server @server_runner_a
+		interpreter.start_server @server_runner_b
 
 		# Server A should respond to /a but not /b
 		response_a = Net::HTTP.get_response URI("http://localhost:#{port_a}/a")
@@ -193,9 +195,8 @@ class E2E_Server_Test < Minitest::Test
 		response_b_404 = Net::HTTP.get_response URI("http://localhost:#{port_b}/a")
 		assert_equal '404', response_b_404.code
 
-		# Cleanup
-		@server_runner_a.stop
-		@server_runner_b.stop
-		@server_runner = nil # So teardown doesn't try to stop it again
+		interpreter.stop_server @server_runner_a
+		interpreter.stop_server @server_runner_b
+		@server_runner = nil
 	end
 end

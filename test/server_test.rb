@@ -87,11 +87,12 @@ class Server_Test < Base_Test
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
 
-		server_runner = Ore::User_Server.new server_instance, interpreter
+		user_server                 = Ore::Server.new
+		user_server.server_instance = server_instance
+		user_server.port            = Integer(server_instance.get(:port) || Ore::Server::DEFAULT_PORT)
 
-		assert_equal 8888, server_runner.port
-		assert_equal server_instance, server_runner.server_instance
-		assert_equal interpreter, server_runner.interpreter
+		assert_equal 8888, user_server.port
+		assert_equal server_instance, user_server.server_instance
 	end
 
 	def test_route_collection
@@ -116,10 +117,8 @@ class Server_Test < Base_Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new
-		server_instance = interpreter.run code
-
-		Ore::User_Server.new server_instance, interpreter
+		interpreter = Ore::Interpreter.new
+		interpreter.run code
 
 		assert_equal 2, interpreter.routes.count
 	end
@@ -148,22 +147,17 @@ class Server_Test < Base_Test
 
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
+		routes          = interpreter.routes
 
-		server_runner = Ore::User_Server.new server_instance, interpreter
-		routes        = interpreter.routes
-
-		# Test matching simple parameterized route
-		matched = server_runner.match_route 'get', ['users', '123'], routes
+		matched = interpreter.match_route 'get', ['users', '123'], routes
 		assert matched
 		assert_equal 'get', matched.http_method.value
 
-		# Test matching nested parameterized route
-		matched = server_runner.match_route 'get', ['posts', '456', 'comments', '789'], routes
+		matched = interpreter.match_route 'get', ['posts', '456', 'comments', '789'], routes
 		assert matched
 		assert_equal 'get', matched.http_method.value
 
-		# Test non-matching route
-		matched = server_runner.match_route 'post', ['users', '123'], routes
+		matched = interpreter.match_route 'post', ['users', '123'], routes
 		assert_nil matched
 	end
 
@@ -185,24 +179,19 @@ class Server_Test < Base_Test
 		    app = Web_App()
 		ORE
 
-		interpreter     = Ore::Interpreter.new
-		server_instance = interpreter.run code
-
-		server_runner = Ore::User_Server.new server_instance, interpreter
-		route         = interpreter.routes.values.first
-
+		interpreter = Ore::Interpreter.new
+		interpreter.run code
+		route      = interpreter.routes.values.first
 		path_parts = ['users', '42', 'posts', '99']
-		url_params = server_runner.extract_url_params path_parts, route
+		url_params = interpreter.extract_url_params path_parts, route
 
 		assert_equal '42', url_params['user_id']
 		assert_equal '99', url_params['post_id']
 	end
 
 	def test_query_string_parsing
-		interpreter   = Ore::Interpreter.new
-		server_runner = Ore::User_Server.new Ore::Instance.new('Server'), interpreter
-
-		query_params = server_runner.parse_query_string 'name=John&age=30&city=NYC'
+		interpreter  = Ore::Interpreter.new
+		query_params = interpreter.parse_query_string 'name=John&age=30&city=NYC'
 
 		assert_equal 'John', query_params['name']
 		assert_equal '30', query_params['age']
@@ -210,10 +199,8 @@ class Server_Test < Base_Test
 	end
 
 	def test_query_string_with_url_encoding
-		interpreter   = Ore::Interpreter.new
-		server_runner = Ore::User_Server.new Ore::Instance.new('Server'), interpreter
-
-		query_params = server_runner.parse_query_string 'message=Hello%20World&special=%21%40%23'
+		interpreter  = Ore::Interpreter.new
+		query_params = interpreter.parse_query_string 'message=Hello%20World&special=%21%40%23'
 
 		assert_equal 'Hello World', query_params['message']
 		assert_equal '!@#', query_params['special']

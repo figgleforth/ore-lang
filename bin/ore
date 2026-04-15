@@ -4,13 +4,14 @@ require_relative '../src/ore'
 
 INSTRUCTIONS = <<~INST
     Usage:
-        bundle exec bin/ore <file>          Execute code file
+        bundle exec bin/ore <file>          Execute file and keep running until interrupt
         bundle exec bin/ore [command]       Run command
 
     COMMANDS:
-        run <file>            Execute file and keep running until interrupt (no hot-reload)
+        run <file>            Execute file and keep running until interrupt
+        check <file>          Run basic type check on file
+
         repl                  Enter repl mode, type code press enter
-        check <file>          Type checks only 
 
         interp <code>         Execute code string
         interpf <file>        Execute file
@@ -65,7 +66,7 @@ begin
 	when 'interpf-nostd'
 		pp Ore.interp_file ARGV[1], load_standard_library: false
 	when 'run'
-		pp Ore.interp_file_with_hot_reload ARGV[1]
+		pp Ore.interp_file ARGV[1]
 	else
 		if ARGV[0]
 			pp Ore.interp_file ARGV[0]

@@ -89,7 +89,7 @@ module Ore
 	end
 
 	class Func < Scope
-		attr_accessor :expressions, :static, :arguments
+		attr_accessor :expressions, :arguments
 	end
 
 	class Route < Func
@@ -359,15 +359,8 @@ module Ore
 	end
 
 	class Server < Instance
-		attr_accessor :port, :routes
-
-		def initialize name = 'Server'
-			super name
-
-			@routes                 = {}
-			@declarations['port']   = nil
-			@declarations['routes'] = @routes
-		end
+		DEFAULT_PORT = 8080
+		attr_accessor :server_instance, :port, :routes, :webrick_server, :server_thread
 	end
 
 	class Request < Scope
