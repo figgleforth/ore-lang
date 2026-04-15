@@ -17,10 +17,10 @@ module Ore
 		# Maps an expression to its Ore type name. Returns nil if unknown.
 		def infer_type expr
 			case expr
-			when Ore::String_Expr      then 'String'
-			when Ore::Number_Expr      then 'Number'
-			when Ore::Symbol_Expr      then 'Symbol'
-			when Ore::Identifier_Expr  then types_by_identifier[expr.value]
+			when Ore::String_Expr then 'String'
+			when Ore::Number_Expr then 'Number'
+			when Ore::Symbol_Expr then 'Symbol'
+			when Ore::Identifier_Expr then types_by_identifier[expr.value]
 			else nil
 			end
 		end

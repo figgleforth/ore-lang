@@ -3,7 +3,6 @@ require_relative 'shared/helpers'
 require_relative 'shared/ascii'
 require_relative 'shared/super_proxies'
 
-require_relative 'systems/user_server'
 require_relative 'systems/dom_renderer'
 
 # Compile-time (source to AST)
@@ -41,65 +40,6 @@ module Ore
 		interpreter.run source_code
 	end
 
-	def self.interp_file_with_hot_reload filepath, load_standard_library: true
-		require 'listen'
-
-		reload          = true
-		listener        = nil
-		current_servers = []
-		shutdown        = false
-
-		Signal.trap 'INT' do
-			puts Ore::Ascii.dim "░ Shutting down safely"
-			shutdown = true
-			Thread.main.raise Interrupt
-		end
-
-		Signal.trap 'TERM' do
-			puts Ore::Ascii.dim "░ Shutting down safely"
-			shutdown = true
-			Thread.main.raise Interrupt
-		end
-
-		begin
-			while reload && !shutdown
-				reload = false
-
-				code                              = File.read filepath
-				interpreter                       = Interpreter.new
-				interpreter.load_standard_library = load_standard_library
-				interpreter.register_source filepath, code
-				result = interpreter.run code
-
-				if interpreter.servers.any?
-					current_servers = interpreter.servers
-
-					unless listener
-						listener = Listen.to('.', only: /\.(ore|rb)$/) do |modified, added, removed|
-							puts Ore::Ascii.dim "▓▒░ Reloading due to rb|ore file changes"
-							reload = true
-							current_servers.each(&:stop)
-						end
-						listener.start
-					end
-
-					puts Ore::Ascii.dim "▓▒░ Press ctrl+c to shut down"
-
-					current_servers.each do |server|
-						puts Ore::Ascii.dim "▓▒░ Ore Server named `#{server.server_instance.name}` started at http://localhost:#{server.port}"
-						server.server_thread&.join
-					end
-				end
-			end
-		rescue Interrupt
-		ensure
-			listener&.stop if listener
-			current_servers.each &:stop
-		end
-
-		result
-	end
-
 	def self.parse source_code
 		Parser.new(Lexer.new(source_code).output).output
 	end
@@ -114,5 +54,17 @@ module Ore
 
 	def self.lex_file filepath
 		Lexer.new(File.read(filepath)).output
+	end
+
+	def self.type_check_file filepath
+		self.type_check File.read(filepath)
+	end
+
+	def self.type_check source
+		expressions = Ore.parse source
+		checker     = Ore::Type_Checker.new expressions
+		if checker.output
+			raise checker.output
+		end
 	end
 end

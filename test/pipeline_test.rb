@@ -35,6 +35,6 @@ class Pipeline_Test < Base_Test
 	def test_type_checker
 		lexemes     = Ore::Lexer.new("42").output
 		expressions = Ore::Parser.new(lexemes).output
-		Ore::Type_Checker.new(expressions)
+		assert_nil Ore::Type_Checker.new(expressions).output
 	end
 end
