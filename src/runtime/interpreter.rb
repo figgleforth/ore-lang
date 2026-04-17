@@ -4,10 +4,8 @@ require 'json'
 
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser
-
-		attr_accessor :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :last_output
-
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :last_output
+		
 		def initialize
 			@load_standard_library = true
 			@input                 = [] # [Ore::Expression]
@@ -1841,7 +1839,8 @@ module Ore
 		end
 
 		def build_ore_response webrick_response
-			res                                  = Ore::Response.new webrick_response
+			res                                  = Ore::Response.new
+			res.webrick_response                 = webrick_response
 			res.declarations['webrick_response'] = webrick_response
 			res.declarations['status']           = 200
 			res.declarations['headers']          = {}

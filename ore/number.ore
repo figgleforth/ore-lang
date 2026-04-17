@@ -9,6 +9,7 @@ Number {
 	}
 
 	clamp { min, max; @super }
+	./rand { max; @super }
 	to_s {; @super }
 	abs {; @super }
 	floor {; @super }
