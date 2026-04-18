@@ -144,4 +144,18 @@ module Ore
 
 	class Reserved_Function_Delimiter < Error
 	end
+
+	class Type_Contract_Violation < Error
+		attr_accessor :contract, :actual
+
+		def initialize expression, contract, actual, interpreter
+			@contract = contract
+			@actual   = actual
+			super expression, interpreter
+		end
+
+		def message
+			"Type contract violation: expected #{@contract}, got #{@actual || 'unknown'}"
+		end
+	end
 end

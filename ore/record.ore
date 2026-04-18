@@ -5,6 +5,9 @@ Record {
 	./database,
 	./all {; @super }
 	./find { id; @super }
+	./find_by { dict; @super }
+	./where { dict; @super }
 	./create { dict; @super }
+	./update { id, dict; @super }
 	./delete { id; @super }
 }

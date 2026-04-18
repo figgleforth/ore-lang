@@ -1,11 +1,12 @@
 module Ore
 	class Scope
-		attr_accessor :enclosing_scope, :sibling_scopes, :declarations, :name
+		attr_accessor :enclosing_scope, :sibling_scopes, :declarations, :name, :type_contracts
 
 		def initialize name = nil
 			@name           = name
 			@declarations   = {}
 			@sibling_scopes = []
+			@type_contracts = {}
 		end
 
 		def declare identifier, value
@@ -313,6 +314,11 @@ module Ore
 		def proxy_sqrt
 			Math.sqrt numerator
 		end
+
+		def proxy_rand max
+			max_val = max.respond_to?(:numerator) ? max.numerator : max.to_i
+			::Kernel.rand(max_val + 1)
+		end
 	end
 
 	class Nil < Scope # Like Ruby's NilClass, this represents the absence of a value.
@@ -370,13 +376,7 @@ module Ore
 	end
 
 	class Response < Scope
-		def initialize webrick_response
-			super 'Response'
-		end
-
-		def proxy_redirect to
-			webrick_response.set_redirect WEBrick::HTTPStatus::SeeOther, to
-		end
+		attr_accessor :webrick_response
 	end
 
 	class Record < Instance
@@ -425,6 +425,21 @@ module Ore
 		def proxy_delete id
 			table.where(id: id).delete
 		end
+
+		def proxy_update id, ore_dict
+			table.where(id: id).update ore_dict.dict
+		end
+
+		def proxy_find_by ore_dict
+			record = table.where(ore_dict.dict).first
+			record ? Ore::Dictionary.new(record) : nil
+		end
+
+		def proxy_where ore_dict
+			records      = table.where(ore_dict.dict).all
+			dictionaries = records.map { |hash| Ore::Dictionary.new hash }
+			Ore::Array.new dictionaries
+		end
 	end
 
 	class Database < Instance
@@ -458,8 +473,14 @@ module Ore
 						primary_key col
 					when 'String'
 						String col
-					else
-						raise "Metaprogram the rest of these"
+					when 'Text'
+						String col, text: true # text:true changes this from VARCHAR(255) -> TEXT
+					when 'Integer'
+						Integer col
+					when 'Float'
+						Float col
+					when 'Boolean'
+						TrueClass col
 					end
 				end
 			end

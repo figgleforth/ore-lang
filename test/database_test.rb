@@ -137,4 +137,110 @@ class Database_Test < Base_Test
 		assert_equal({ id: 2, name: 'Luna' }, out.values[3].dict)
 		assert out.values.last
 	end
+
+	def test_create_table_column_types
+		refute_raises do
+			Ore.interp <<~ORE
+			    #{DATABASE}
+			    db = @connect Sqlite('#{@filepath}')
+				db.create_table('things', {
+					id: 'primary_key',
+					label: 'String',
+					note: 'Text',
+					count: 'Integer',
+					score: 'Float',
+					active: 'Boolean'
+				})
+			ORE
+		end
+	end
+
+	def test_record_update
+		out = Ore.interp <<~ORE
+		    #{DATABASE}, #{RECORD}
+		    db = @connect Sqlite('#{@filepath}')
+
+			db.create_table('users', { id: 'primary_key', name: 'String' })
+
+			User | Record {
+				./database = db
+				table_name = 'users'
+			}
+
+			id = User.create({name: 'Cooper'})
+			User.update(id, {name: 'Cooper Updated'})
+			User.find(id)
+		ORE
+		assert_equal 'Cooper Updated', out.dict[:name]
+	end
+
+	def test_record_find_by
+		out = Ore.interp <<~ORE
+		    #{DATABASE}, #{RECORD}
+		    db = @connect Sqlite('#{@filepath}')
+
+			db.create_table('users', { id: 'primary_key', name: 'String' })
+
+			User | Record {
+				./database = db
+				table_name = 'users'
+			}
+
+			User.create({name: 'Cooper'})
+			User.create({name: 'Luna'})
+			User.find_by({name: 'Luna'})
+		ORE
+		assert_equal({ id: 2, name: 'Luna' }, out.dict)
+	end
+
+	def test_record_find_by_returns_nil_when_not_found
+		out = Ore.interp <<~ORE
+		    #{DATABASE}, #{RECORD}
+		    db = @connect Sqlite('#{@filepath}')
+
+			db.create_table('users', { id: 'primary_key', name: 'String' })
+
+			User | Record {
+				./database = db
+				table_name = 'users'
+			}
+
+			User.find_by({name: 'nobody'})
+		ORE
+		assert_nil out
+	end
+
+	def test_record_where
+		out = Ore.interp <<~ORE
+		    #{DATABASE}, #{RECORD}
+		    db = @connect Sqlite('#{@filepath}')
+
+			db.create_table('items', { id: 'primary_key', name: 'String', kind: 'String' })
+
+			Item | Record {
+				./database = db
+				table_name = 'items'
+			}
+
+			Item.create({name: 'Apple', kind: 'fruit'})
+			Item.create({name: 'Banana', kind: 'fruit'})
+			Item.create({name: 'Carrot', kind: 'vegetable'})
+
+			Item.where({kind: 'fruit'})
+		ORE
+		assert_equal 2, out.values.count
+		assert_equal ['Apple', 'Banana'], out.values.map { |d| d.dict[:name] }
+	end
+
+	def test_number_rand
+		100.times do
+			out = Ore.interp 'Number.rand(10)'
+			assert_includes 0..10, out
+		end
+	end
+
+	def test_number_rand_zero
+		out = Ore.interp 'Number.rand(0)'
+		assert_equal 0, out
+	end
 end

@@ -4,9 +4,7 @@ require 'json'
 
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser
-
-		attr_accessor :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :last_output
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :last_output
 
 		def initialize
 			@load_standard_library = true
@@ -216,16 +214,6 @@ module Ore
 			scope.static_declarations.add ident_expr.value.to_s
 		end
 
-		def find_ruby_class_for_type type
-			type.types.to_a.reverse.each do |type_name|
-				ore_name = "Ore::#{type_name}"
-				next unless Object.const_defined? ore_name
-				k = Object.const_get ore_name
-				return k if k.is_a?(Class) && k < Ore::Instance && k != Ore::Instance
-			end
-			nil
-		end
-
 		def check_dot_access_permissions! scope, ident, expr
 			binding = Ore.binding_of_ident scope, ident
 			privacy = Ore.privacy_of_ident ident
@@ -245,6 +233,273 @@ module Ore
 					raise Ore::Cannot_Call_Private_Static_Member_On_Type.new(expr, self)
 				end
 			end
+		end
+
+		def find_ruby_class_for_type type
+			type.types.to_a.reverse.each do |type_name|
+				ore_name = "Ore::#{type_name}"
+				next unless Object.const_defined? ore_name
+				k = Object.const_get ore_name
+				return k if k.is_a?(Class) && k < Ore::Instance && k != Ore::Instance
+			end
+			nil
+		end
+
+		def truthy? value
+			!(value == nil || value == 0 || value == false) # todo? does this need to check truthiness of ore constructs?
+		end
+
+		def type_name_to_string value
+			case value
+			when Ore::Number then 'Number'
+			when Integer, Float then 'Number'
+			when Ore::String then 'String'
+			when Ore::Array then 'Array'
+			when Ore::Dictionary then 'Dictionary'
+			when Ore::Bool then 'Bool'
+			when Ore::Instance then value.types.first
+			when Ore::Type then value.name
+			# todo: Why are these here? Excluding the else clause
+			when true, false then 'Bool'
+			when ::String then 'String'
+			when ::Array then 'Array'
+			when ::Hash then 'Dictionary'
+			else nil
+			end
+		end
+
+		def start_server server
+			webrick = WEBrick::HTTPServer.new Port:      server.port,
+			                                  Logger:    WEBrick::Log.new("/dev/null"),
+			                                  AccessLog: []
+
+			webrick.mount_proc '/onclick/' do |req, res|
+				puts Ore::Ascii.dim "#{'DOM'.rjust(7, ' ')} #{req.path}"
+				handle_request server, req, res
+			end
+
+			webrick.mount_proc '' do |req, res|
+				handle_request server, req, res
+			end
+
+			server.webrick_server = webrick
+			server.server_thread  = Thread.new { webrick.start }
+			server.server_thread
+		end
+
+		def stop_server server
+			server.webrick_server&.shutdown
+			Thread.kill server.server_thread if server.server_thread
+		end
+
+		def handle_request server, request, response
+			path_string  = request.path
+			query_string = request.query_string
+			http_method  = request.request_method.downcase
+			path_parts   = request.path.split('/').reject { _1.empty? }
+			body_hash    = CGI.parse(request.body || "").transform_values(&:first)
+			headers_hash = request.header.to_h
+
+			req_info = Ascii.dim ""
+			unless body_hash.empty?
+				req_info = req_info.prepend Ascii.green
+			end
+			req_info << Ascii.dim(http_method.upcase.rjust(7, " "))
+			req_info << " "
+			req_info << Ascii.reset(path_string.gsub("/", "#{Ascii.dim('/')}#{Ascii.reset}"))
+			unless body_hash.empty?
+				req_info << " #{Ascii.dim body_hash}"
+			end
+			puts req_info
+
+			if path_string.start_with?("/onclick/")
+				object_id = path_parts.last.to_i
+				handler   = onclick_handlers[object_id]
+				if handler
+					begin
+						if request.body && !request.body.empty?
+							json_body = JSON.parse request.body rescue {}
+							inputs = json_body['inputs'] || {}
+							inputs.each do |element_id, value|
+								input_instance = input_elements[element_id.to_i]
+								input_instance.declare 'value', value if input_instance
+							end
+						end
+
+						route             = Ore::Route.new
+						route.handler     = handler
+						route.param_names = []
+
+						req = build_ore_request path_string, http_method, body_hash, parse_query_string(query_string), {}, headers_hash
+						res = build_ore_response response
+
+						interp_route_body route, req, res
+
+						component = handler.enclosing_scope
+						if component.is_a?(Ore::Instance) && component.declarations['render']
+							new_html = render_dom_to_html component
+							html_id  = component.declarations['html_id']
+
+							response.status             = 200
+							response['Content-Type']    = 'text/html'
+							response['X-Ore-Target-Id'] = html_id if html_id
+							response.body               = new_html
+							return
+						end
+					rescue => e
+						warn "\n[Ore Onclick Error] #{e.class}: #{e.message}"
+						warn e.backtrace.first(10).map { |line| "  #{line}" }.join("\n")
+						warn ""
+
+						plain_message   = e.message.gsub(/\e\[\d+(?:;\d+)*m/, '')
+						response.status = 500
+						response.body   = "Internal Server Error\n#{plain_message}"
+						return
+					end
+				end
+			end
+
+			if cookie = request.cookies.find { _1.name == BROWSER_VIEW_SIZE }
+				parts = cookie.value.split 'x'
+				size  = { width: parts[0].to_i, height: parts[1].to_i }
+				stack.last.declare BROWSER_VIEW_SIZE, size
+			end
+
+			route_function = match_route http_method, path_parts, server.routes
+
+			if route_function
+				url_params   = extract_url_params path_parts, route_function
+				query_params = parse_query_string query_string
+
+				req = build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
+
+				begin
+					res    = build_ore_response response
+					result = interp_route_body route_function, req, res, url_params, server_instance: server.server_instance
+
+					response.status = res.declarations['status']
+					response.body   = res.declarations['body']
+					res.declarations['headers'].each { |k, v| response.header[k] = v }
+
+					if response.body.to_s =~ /<html|<body|<head/i
+						response.body.prepend "<!DOCTYPE html>"
+
+						dom_js     = File.read 'src/runtime/dom.js'
+						script_tag = "<script>#{dom_js}</script>"
+
+						body_str = response.body.to_s
+						if body_str.include?('<head>')
+							response.body = body_str.sub('<head>', '<head>' + script_tag)
+						elsif body_str.include?('<body>')
+							response.body = body_str.sub('<body>', '<body>' + script_tag)
+						else
+							response.body = script_tag + body_str
+						end
+					end
+
+					result
+
+				rescue WEBrick::HTTPStatus::Status => e
+					raise e
+
+				rescue => e
+					warn "\n[Ore Server Error] #{e.class}: #{e.message}"
+					warn e.backtrace.first(10).map { |line| "  #{line}" }.join("\n")
+					warn ""
+
+					plain_message   = e.message.gsub(/\e\[\d+(?:;\d+)*m/, '')
+					plain_backtrace = e.backtrace.map { |line| line.gsub(/\e\[\d+(?:;\d+)*m/, '') }
+
+					response.status = 500
+					response.body   = <<~HTML
+					    <h1>500 Internal Server Error</h1>
+					    <h2>#{e.class}</h2>
+					    <pre>#{plain_message}</pre>
+					    <h3>Backtrace</h3>
+					    <pre>#{plain_backtrace.join("\n")}</pre>
+					HTML
+					response.header['Content-Type'] = 'text/html; charset=utf-8'
+				end
+			else
+				response.status = 404
+				response.body   = <<~HTML
+				    <h1>404 Not Found</h1>
+				    <p>No route matches #{http_method.upcase} #{path_string}</p>
+				    <hr>
+				    <h3>Available Routes:</h3>
+				    <ul>
+				    	#{server.routes.values.map { |r| "<li>#{r.http_method.value.upcase} /#{r.path}</li>" }.join("\n")}
+				    </ul>
+				HTML
+				response.header['Content-Type'] = 'text/html; charset=utf-8'
+			end
+		end
+
+		def match_route http_method, path_parts, routes
+			routes.values.find do |route|
+				next unless route.http_method.value == http_method
+				next unless route.parts.count == path_parts.count
+
+				path_parts.zip(route.parts).all? do |req_part, route_part|
+					(req_part == route_part) || (route_part.start_with?(':'))
+				end
+			end
+		end
+
+		def extract_url_params path_parts, route
+			url_params = {}
+			path_parts.zip(route.parts).each do |req_part, route_part|
+				if route_part.start_with? ':'
+					param_name                    = route_part[1..-1]
+					url_params[param_name]        = req_part
+					url_params[param_name.to_sym] = req_part
+				end
+			end
+			url_params
+		end
+
+		def parse_query_string query_string
+			query_params = {}
+			if query_string
+				query_string.split('&').each do |pair|
+					key, value               = pair.split '=', 2
+					query_params[key]        = CGI.unescape(value || '')
+					query_params[key.to_sym] = CGI.unescape(value || '')
+				end
+			end
+			query_params
+		end
+
+		def build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
+			req          = Ore::Request.new
+			body_dict    = Ore::Dictionary.new body_hash
+			query_dict   = Ore::Dictionary.new query_params
+			params_dict  = Ore::Dictionary.new url_params
+			headers_dict = Ore::Dictionary.new headers_hash
+			link_instance_to_type req, 'Request'
+			link_instance_to_type body_dict, 'Dictionary'
+			link_instance_to_type query_dict, 'Dictionary'
+			link_instance_to_type params_dict, 'Dictionary'
+			link_instance_to_type headers_dict, 'Dictionary'
+			req.declarations['path']              = path_string
+			req.declarations['method']            = http_method
+			req.declarations['query']             = query_dict
+			req.declarations['params']            = params_dict
+			req.declarations['headers']           = headers_dict
+			req.declarations['body']              = body_dict
+			req.declarations['body'].declarations = body_hash
+			req
+		end
+
+		def build_ore_response webrick_response
+			res                                  = Ore::Response.new
+			res.webrick_response                 = webrick_response
+			res.declarations['webrick_response'] = webrick_response
+			res.declarations['status']           = 200
+			res.declarations['headers']          = {}
+			res.declarations['body']             = ''
+			link_instance_to_type res, 'Response'
+			res
 		end
 
 		def collect_routes_from_instance instance
@@ -272,7 +527,7 @@ module Ore
 				call_expr.receiver  = render
 				call_expr.arguments = []
 
-				render_result = interp_func_call render, call_expr
+				render_result = interp_func_body render, call_expr
 
 				"".tap do |html|
 					if render_result.is_a? ::String
@@ -528,14 +783,33 @@ module Ore
 					raise Ore::Cannot_Assign_Incompatible_Type.new(expr, self)
 				end
 			when :identifier
-				# It can be assigned and reassigned, so do nothing.
+				if assignment_scope
+					# If we find a type contract for the left side of the expression, then it will be enforced here.
+					contract = assignment_scope.type_contracts[expr.left.value]
+					if contract && type_name_to_string(right_value) != contract
+						raise Ore::Type_Contract_Violation.new(expr, contract, type_name_to_string(right_value), self)
+					end
+				end
+			end
+
+			if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.type
+				assignment_scope.type_contracts[expr.left.value] = expr.left.type.value
 			end
 
 			assignment_scope.declare expr.left.value, right_value
-
 			track_static_declaration assignment_scope, expr.left
 
 			return right_value
+		end
+
+		# @param expr [Ore::Infix_Expr]
+		def interp_infix_walrus expr
+			right_value      = interpret expr.right
+			assignment_scope = scope_for_identifier(expr.left) || stack.last
+			assignment_scope.declare expr.left.value, right_value
+			assignment_scope.type_contracts[expr.left.value] = type_name_to_string right_value
+			track_static_declaration assignment_scope, expr.left
+			right_value
 		end
 
 		# @param expr [Ore::Infix_Expr]
@@ -667,10 +941,8 @@ module Ore
 		def interp_nil_init expr
 			# attr_accessor :operator, :left, :right
 			begin
-				left = interpret expr.left
-				return left if left
-			rescue # Ore::Undeclared_Identifier is the expected error
-				# Use the correct scope based on scope operator (e.g., ./ for static declarations)
+				return interpret expr.left
+			rescue # Ore::Undeclared_Identifier and ArgumentError # todo: Why `ArgumentError: empty string`. Once this is resolved, then the rescue here should explicitly catch Undeclared_Identifier, probably.
 				scope = scope_for_identifier(expr.left) || stack.last
 				scope.declare expr.left.value, interpret(expr.right)
 
@@ -683,6 +955,8 @@ module Ore
 			case expr.operator.value
 			when '='
 				interp_infix_equals expr
+			when ':='
+				interp_infix_walrus expr
 			when '.'
 				interp_dot_infix expr
 			when '<<'
@@ -835,10 +1109,10 @@ module Ore
 
 			case receiver
 			when Ore::Route
-				interp_func_call receiver.handler, expr
+				interp_func_body receiver.handler, expr
 
 			when Ore::Func
-				interp_func_call receiver, expr
+				interp_func_body receiver, expr
 
 			when Ore::Instance, Ore::Type
 				interp_type_call receiver, expr
@@ -940,7 +1214,7 @@ module Ore
 
 			func_new = instance[:new]
 			if func_new
-				interp_func_call func_new, expr
+				interp_func_body func_new, expr
 			else
 				if expr.arguments.count > 0
 					# todo: Proper error
@@ -966,7 +1240,7 @@ module Ore
 			func
 		end
 
-		def interp_func_call func, expr
+		def interp_func_body func, expr
 			params = func.expressions.select do |expr|
 				expr.is_a? Ore::Param_Expr
 			end
@@ -1031,13 +1305,53 @@ module Ore
 			result.is_a?(Ore::Return) ? result.value : result
 		end
 
+		# @param expr [Ore::Route_Expr]
+		# @return Ore::Route
+		def interp_route expr
+			func = interpret expr.expression
+
+			route                 = Ore::Route.new
+			route.name            = func.name
+			route.enclosing_scope = stack.last
+			route.handler         = func
+			route.http_method     = expr.http_method
+			route.path            = expr.path
+			route.path            = route.path[1..] if route.path.start_with? '/'
+			route.param_names     = expr.param_names || []
+
+			route.parts = route.path.split('/').reject do
+				_1.empty?
+			end
+
+			route_key = if func.name&.value
+				func.name.value
+			else
+				# Anonymous route with auto-generated key: "method:path"
+				"#{route.http_method.value}:#{route.path}"
+			end
+
+			# Store route in the enclosing Type's @routes if it has one (e.g., Server)
+			enclosing_type = stack.reverse.find do |scope|
+				scope.is_a? Ore::Type # note: You could have an instance on the stack, or an empty scope, whatever.
+			end
+			if enclosing_type
+				enclosing_type.routes            ||= {}
+				enclosing_type.routes[route_key] = route
+			end
+
+			@routes[route_key] = route
+			stack.last.declare route_key, route
+
+			route
+		end
+
 		# @param route [Ore::Route] The route to execute
 		# @param req [Ore::Request] Request object to inject
 		# @param res [Ore::Response] Response object to inject
 		# @param url_params [Hash] Extracted URL parameters (e.g., {"id" => "123"})
 		# @param server_instance [Ore::Instance] The server instance (for accessing instance variables)
 		# @return The result of handler execution
-		def interp_route_handler route, req, res, url_params = {}, server_instance: nil
+		def interp_route_body route, req, res, url_params = {}, server_instance: nil
 			handler = route.handler
 			params  = handler.expressions.select { |e| e.is_a? Ore::Param_Expr }
 
@@ -1131,46 +1445,6 @@ module Ore
 			interp_string expr.body
 		end
 
-		# @param expr [Ore::Route_Expr]
-		# @return Ore::Route
-		def interp_route expr
-			func = interpret expr.expression
-
-			route                 = Ore::Route.new
-			route.name            = func.name
-			route.enclosing_scope = stack.last
-			route.handler         = func
-			route.http_method     = expr.http_method
-			route.path            = expr.path
-			route.path            = route.path[1..] if route.path.start_with? '/'
-			route.param_names     = expr.param_names || []
-
-			route.parts = route.path.split('/').reject do
-				_1.empty?
-			end
-
-			route_key = if func.name&.value
-				func.name.value
-			else
-				# Anonymous route with auto-generated key: "method:path"
-				"#{route.http_method.value}:#{route.path}"
-			end
-
-			# Store route in the enclosing Type's @routes if it has one (e.g., Server)
-			enclosing_type = stack.reverse.find do |scope|
-				scope.is_a? Ore::Type # note: You could have an instance on the stack, or an empty scope, whatever.
-			end
-			if enclosing_type
-				enclosing_type.routes            ||= {}
-				enclosing_type.routes[route_key] = route
-			end
-
-			@routes[route_key] = route
-			stack.last.declare route_key, route
-
-			route
-		end
-
 		def interp_composition expr
 			# These are interpreted sequentially, so there are no precedence rules. I think that'll be better in the long term because there's no magic behind their evaluation. You can ensure the correct outcome by using these operators to form the types you need.
 
@@ -1251,10 +1525,6 @@ module Ore
 				# todo: Proper error
 				raise "Unknown composition operator #{expr.operator.value}"
 			end
-		end
-
-		def truthy? value
-			!(value == nil || value == 0 || value == false) # todo? does this need to check truthiness of ore constructs?
 		end
 
 		# @param for_loop_expr [Ore::For_Loop_Expr]
@@ -1615,239 +1885,6 @@ module Ore
 			else
 				raise Ore::Interpret_Expr_Not_Implemented.new(expr, self)
 			end
-		end
-
-		def start_server server
-			webrick = WEBrick::HTTPServer.new Port:      server.port,
-			                                  Logger:    WEBrick::Log.new("/dev/null"),
-			                                  AccessLog: []
-
-			webrick.mount_proc '/onclick/' do |req, res|
-				puts Ore::Ascii.dim "#{'DOM'.rjust(7, ' ')} #{req.path}"
-				handle_request server, req, res
-			end
-
-			webrick.mount_proc '' do |req, res|
-				handle_request server, req, res
-			end
-
-			server.webrick_server = webrick
-			server.server_thread  = Thread.new { webrick.start }
-			server.server_thread
-		end
-
-		def stop_server server
-			server.webrick_server&.shutdown
-			Thread.kill server.server_thread if server.server_thread
-		end
-
-		def handle_request server, request, response
-			path_string  = request.path
-			query_string = request.query_string
-			http_method  = request.request_method.downcase
-			path_parts   = request.path.split('/').reject { _1.empty? }
-			body_hash    = CGI.parse(request.body || "").transform_values(&:first)
-			headers_hash = request.header.to_h
-
-			req_info = Ascii.dim ""
-			unless body_hash.empty?
-				req_info = req_info.prepend Ascii.green
-			end
-			req_info << Ascii.dim(http_method.upcase.rjust(7, " "))
-			req_info << " "
-			req_info << Ascii.reset(path_string.gsub("/", "#{Ascii.dim('/')}#{Ascii.reset}"))
-			unless body_hash.empty?
-				req_info << " #{Ascii.dim body_hash}"
-			end
-			puts req_info
-
-			if path_string.start_with?("/onclick/")
-				object_id = path_parts.last.to_i
-				handler   = onclick_handlers[object_id]
-				if handler
-					begin
-						if request.body && !request.body.empty?
-							json_body = JSON.parse request.body rescue {}
-							inputs = json_body['inputs'] || {}
-							inputs.each do |element_id, value|
-								input_instance = input_elements[element_id.to_i]
-								input_instance.declare 'value', value if input_instance
-							end
-						end
-
-						route             = Ore::Route.new
-						route.handler     = handler
-						route.param_names = []
-
-						req = build_ore_request path_string, http_method, body_hash, parse_query_string(query_string), {}, headers_hash
-						res = build_ore_response response
-
-						interp_route_handler route, req, res
-
-						component = handler.enclosing_scope
-						if component.is_a?(Ore::Instance) && component.declarations['render']
-							new_html = render_dom_to_html component
-							html_id  = component.declarations['html_id']
-
-							response.status             = 200
-							response['Content-Type']    = 'text/html'
-							response['X-Ore-Target-Id'] = html_id if html_id
-							response.body               = new_html
-							return
-						end
-					rescue => e
-						warn "\n[Ore Onclick Error] #{e.class}: #{e.message}"
-						warn e.backtrace.first(10).map { |line| "  #{line}" }.join("\n")
-						warn ""
-
-						plain_message   = e.message.gsub(/\e\[\d+(?:;\d+)*m/, '')
-						response.status = 500
-						response.body   = "Internal Server Error\n#{plain_message}"
-						return
-					end
-				end
-			end
-
-			if cookie = request.cookies.find { _1.name == BROWSER_VIEW_SIZE }
-				parts = cookie.value.split 'x'
-				size  = { width: parts[0].to_i, height: parts[1].to_i }
-				stack.last.declare BROWSER_VIEW_SIZE, size
-			end
-
-			route_function = match_route http_method, path_parts, server.routes
-
-			if route_function
-				url_params   = extract_url_params path_parts, route_function
-				query_params = parse_query_string query_string
-
-				req = build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
-
-				begin
-					res    = build_ore_response response
-					result = interp_route_handler route_function, req, res, url_params, server_instance: server.server_instance
-
-					response.status = res.declarations['status']
-					response.body   = res.declarations['body']
-					res.declarations['headers'].each { |k, v| response.header[k] = v }
-
-					if response.body.to_s =~ /<html|<body|<head/i
-						response.body.prepend "<!DOCTYPE html>"
-
-						dom_js     = File.read 'src/runtime/dom.js'
-						script_tag = "<script>#{dom_js}</script>"
-
-						body_str = response.body.to_s
-						if body_str.include?('<head>')
-							response.body = body_str.sub('<head>', '<head>' + script_tag)
-						elsif body_str.include?('<body>')
-							response.body = body_str.sub('<body>', '<body>' + script_tag)
-						else
-							response.body = script_tag + body_str
-						end
-					end
-
-					result
-
-				rescue WEBrick::HTTPStatus::Status => e
-					raise e
-
-				rescue => e
-					warn "\n[Ore Server Error] #{e.class}: #{e.message}"
-					warn e.backtrace.first(10).map { |line| "  #{line}" }.join("\n")
-					warn ""
-
-					plain_message   = e.message.gsub(/\e\[\d+(?:;\d+)*m/, '')
-					plain_backtrace = e.backtrace.map { |line| line.gsub(/\e\[\d+(?:;\d+)*m/, '') }
-
-					response.status = 500
-					response.body   = <<~HTML
-					    <h1>500 Internal Server Error</h1>
-					    <h2>#{e.class}</h2>
-					    <pre>#{plain_message}</pre>
-					    <h3>Backtrace</h3>
-					    <pre>#{plain_backtrace.join("\n")}</pre>
-					HTML
-					response.header['Content-Type'] = 'text/html; charset=utf-8'
-				end
-			else
-				response.status = 404
-				response.body   = <<~HTML
-				    <h1>404 Not Found</h1>
-				    <p>No route matches #{http_method.upcase} #{path_string}</p>
-				    <hr>
-				    <h3>Available Routes:</h3>
-				    <ul>
-				    	#{server.routes.values.map { |r| "<li>#{r.http_method.value.upcase} /#{r.path}</li>" }.join("\n")}
-				    </ul>
-				HTML
-				response.header['Content-Type'] = 'text/html; charset=utf-8'
-			end
-		end
-
-		def match_route http_method, path_parts, routes
-			routes.values.find do |route|
-				next unless route.http_method.value == http_method
-				next unless route.parts.count == path_parts.count
-
-				path_parts.zip(route.parts).all? do |req_part, route_part|
-					(req_part == route_part) || (route_part.start_with?(':'))
-				end
-			end
-		end
-
-		def extract_url_params path_parts, route
-			url_params = {}
-			path_parts.zip(route.parts).each do |req_part, route_part|
-				if route_part.start_with? ':'
-					param_name                    = route_part[1..-1]
-					url_params[param_name]        = req_part
-					url_params[param_name.to_sym] = req_part
-				end
-			end
-			url_params
-		end
-
-		def parse_query_string query_string
-			query_params = {}
-			if query_string
-				query_string.split('&').each do |pair|
-					key, value               = pair.split '=', 2
-					query_params[key]        = CGI.unescape(value || '')
-					query_params[key.to_sym] = CGI.unescape(value || '')
-				end
-			end
-			query_params
-		end
-
-		def build_ore_request path_string, http_method, body_hash, query_params, url_params, headers_hash
-			req          = Ore::Request.new
-			body_dict    = Ore::Dictionary.new body_hash
-			query_dict   = Ore::Dictionary.new query_params
-			params_dict  = Ore::Dictionary.new url_params
-			headers_dict = Ore::Dictionary.new headers_hash
-			link_instance_to_type req, 'Request'
-			link_instance_to_type body_dict, 'Dictionary'
-			link_instance_to_type query_dict, 'Dictionary'
-			link_instance_to_type params_dict, 'Dictionary'
-			link_instance_to_type headers_dict, 'Dictionary'
-			req.declarations['path']              = path_string
-			req.declarations['method']            = http_method
-			req.declarations['query']             = query_dict
-			req.declarations['params']            = params_dict
-			req.declarations['headers']           = headers_dict
-			req.declarations['body']              = body_dict
-			req.declarations['body'].declarations = body_hash
-			req
-		end
-
-		def build_ore_response webrick_response
-			res                                  = Ore::Response.new webrick_response
-			res.declarations['webrick_response'] = webrick_response
-			res.declarations['status']           = 200
-			res.declarations['headers']          = {}
-			res.declarations['body']             = ''
-			link_instance_to_type res, 'Response'
-			res
 		end
 	end
 end
