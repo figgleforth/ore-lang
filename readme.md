@@ -36,7 +36,8 @@ Greet('Ore').greeting()
 
 - [Features](#features)
 - [Code Examples](#code-examples)
-	- [Type Annotations](#type-annotations)
+	- [Manual Type Contracts](#manual-type-contracts)
+	- [Runtime Type Contracts](#runtime-type-contracts)
 	- [Variables](#variables)
 	- [Functions](#functions)
 	- [Classes](#classes)
@@ -50,12 +51,11 @@ Greet('Ore').greeting()
 
 ### Features
 
-- Static type checking at parse time
-	- Type annotations on variables: `x: String = 'hello'`
-	- Type annotations on function parameters: `add { a: Number, b: Number; a + b }`
-	- Type annotations on function return values: `add: Number { a: Number, b: Number; a + b }`
-	- Mismatches caught before execution for literal values
-	- Call site argument types checked against function signatures
+- Gradual typing — opt in as needed
+	- Static type checking at parse time for literal mismatches (`x: String = 99`)
+	- Call site argument types checked against typed function signatures (`add(123, 'boo')`, `add { a: Number, b: NUmber }`)
+	- Runtime type contracts via `:=` where type is inferred and enforced on future assignments (`x := 123`)
+	- Plain `=` behaves dynamic without reassignment restrictions
 - Naming conventions replace keywords
 	- `Capitalize` classes
 	- `lowercase` variables and functions
@@ -101,9 +101,9 @@ Greet('Ore').greeting()
 
 ### Code Examples
 
-#### Type Annotations
+#### Manual Type Contracts
 
-Type annotations use `: TypeName` syntax on variables, function parameters, and function return values. Mismatches with literal values are caught before the program runs.
+Manual Type Contracts are created by using `: Type` syntax on variables and function parameters.
 
 ```ore
 # Variable annotations
@@ -118,14 +118,25 @@ add { a: Number, b: Number;
 
 add(1, 2)      # ok
 add(1, 'two')  # Type_Checking_Failed — Number expected for b, String given
-
-# Return type annotation
-add: Number { a: Number, b: Number;
-	a + b
-}
 ```
 
 Annotations on variables whose values aren't known statically (e.g. the result of a function call or another identifier) are not checked at parse time — only literal mismatches are caught.
+
+#### Runtime Type Contracts
+
+`:=` infers a type from the right hand side and locks the variable to that type for future `=` assignments. Plain `=` without a prior `:=` or annotation stays fully dynamic.
+
+```ore
+x := 4        # x is now a Number
+x = 8         # ok — same type
+x = 'hello'   # Type_Contract_Violation — Number expected, got String
+
+x := 'hello'  # re-initialize — x is now a String
+x = 'world'   # ok
+
+y = 4
+y = 'hello'   # ok — no contract, fully dynamic
+```
 
 #### Variables
 

@@ -5,10 +5,6 @@ module Ore
 
 		def initialize lexeme = nil
 			self.lexeme = lexeme
-			# todo: Uncomment this to continue tracking down.
-			# if lexeme && !lexeme.is_a?(Lexeme)
-			# warn "#{self} init'd with nil non-Lexeme (#{lexeme})"
-			# end
 		end
 
 		def lexeme= lexeme

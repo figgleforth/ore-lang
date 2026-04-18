@@ -2202,6 +2202,37 @@ class Interpreter_Test < Base_Test
 	# note: The idea is, given (abc,1)
 	# if abc exists, use that value
 	# if not abc exists, declare abc=nil
+	def test_walrus_basic_assignment
+		assert_equal 4,       Ore.interp('x := 4, x')
+		assert_equal 'hello', Ore.interp('x := "hello", x')
+	end
+
+	def test_walrus_reinitializes_type
+		assert_equal 'hello', Ore.interp('x := 4, x := "hello", x')
+	end
+
+	def test_walrus_same_type_reassign_with_equals
+		assert_equal 8, Ore.interp('x := 4, x = 8, x')
+	end
+
+	def test_walrus_type_contract_violation
+		assert_raises Ore::Type_Contract_Violation do
+			Ore.interp 'x := 4, x = "hello"'
+		end
+	end
+
+	def test_walrus_contract_violation_message
+		err = assert_raises Ore::Type_Contract_Violation do
+			Ore.interp 'x := 4, x = "hello"'
+		end
+		assert_match 'Number', err.message
+		assert_match 'String', err.message
+	end
+
+	def test_plain_equals_without_walrus_stays_dynamic
+		assert_equal 'anything', Ore.interp('x = 4, x = "anything", x')
+	end
+
 	def test_new_comma_nil_init
 		out = Ore.interp <<~CODE
 		    x = (abc,1)    # declares abc = nil
