@@ -1,0 +1,94 @@
+# Operator Overloading Examples
+# Syntax: @operator <op> @<fixity> <precedence> { params; body }
+# Fixities: infix (two operands), prefix (right operand), postfix (left operand)
+# Operators are regular functions stored in scope — they don't leak outside their declaring scope.
+
+# ─── Infix: pipe operator ────────────────────────────────────────────────────
+# Passes the left value as the argument to the right function.
+
+@operator -> @infix 300 { left, right;
+	right(left)
+}
+
+double { n; n * 2 }
+add_one { n; n + 1 }
+square { n; n * n }
+
+5 -> double -> add_one   # => 11
+3 -> square -> double    # => 18
+
+
+# ─── Prefix: currency constructor ────────────────────────────────────────────
+# $ builds a US Dollar Currency instance from an amount.
+
+Currency {
+	amount,
+	name,
+	code,
+}
+
+@operator $ @prefix 900 { amount;
+	c = Currency()
+	c.amount = amount
+	c.name = 'US Dollar'
+	c.code = 'USD'
+	c
+}
+
+price = $42
+@puts "-- Dollar operator --"
+@puts "`price.name`: `price.code` `price.amount`"
+
+
+# ─── Postfix + Infix: time literals ──────────────────────────────────────────
+# : builds a Time from hour and minute. pm/am annotate the period.
+# Precedence matters: pm at 600 < : at 700, so : binds first and pm gets the full Time.
+
+Time {
+	hour,
+	minute,
+	period,
+}
+
+@operator : @infix 700 { hour, minute;
+	t = Time()
+	t.hour = hour
+	t.minute = minute
+	t
+}
+
+@operator pm @postfix 600 { left;
+	left.period = 'pm'
+	left
+}
+
+@operator am @postfix 600 { left;
+	left.period = 'am'
+	left
+}
+
+morning = 9:30am
+evening = 11:22pm
+
+@puts "-- : and am/pm custom operators --"
+@puts "`morning.hour`:`morning.minute``morning.period`"
+@puts "`evening.hour`:`evening.minute``evening.period`"
+
+
+# ─── Scoped overload ─────────────────────────────────────────────────────────
+# Overloads declared inside a function stay inside that function's scope.
+
+result = compute {;
+	@operator + @infix 700 { left, right;
+		left * right
+	}
+	inner = 3 + 4
+}()
+
+
+outer = 3 + 4
+
+@assert result == 12
+@assert outer == 7
+
+(outer, result)

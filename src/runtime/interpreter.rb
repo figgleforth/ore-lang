@@ -1729,6 +1729,9 @@ module Ore
 				value = interpret expr.expression
 				puts value # note: Don't remove this like I did, it is supposed to print out. todo: Be able to set your own output stream
 				value
+			when 'assert'
+				condition = interpret expr.expression
+				raise "assert failed #{expr.inspect}" unless condition
 			when 'super'
 				# The @super directive evaluates to the result of calling the ruby Ruby method
 				func_scope = stack.last

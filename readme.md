@@ -98,6 +98,10 @@ Greet('Ore').greeting()
 	- Declare `css_` prefixed properties for CSS (`css_color`, `css_background`)
 	- Routes returning `Dom` instances automatically render to HTML
 	- Standard library provides common HTML elements
+- Operator overloading for `infix`, `prefix`, and `postfix` fixities
+	- Declare with `@operator <op> @<fixity> <precedence> { params; body }`
+	- Operators are regular functions stored in scope — overloads don't leak outside their declaring scope
+	- Any symbol sequence or identifier can be an operator (`->`, `!!`, `pm`, `$`)
 
 ### Code Examples
 
@@ -472,6 +476,54 @@ My_Div | Dom {
 ```
 
 Note: Rendering HTML only works when `render{;}` is called by a Server instance. See [html.ore](ore/html.ore) for predefined `Dom` elements. See [web1.ore](examples/web1.ore) for Server and HTML usage.
+
+#### Operator Overloading
+
+Operators are declared with `@operator`, a fixity (`@infix`, `@prefix`, `@postfix`), a precedence, and a function body. They are stored as regular functions in the declaring scope and looked up at runtime.
+
+```ore
+# Infix: pipe operator — passes left as argument to right function
+@operator -> @infix 300 { left, right;
+	right(left)
+}
+
+double { n; n * 2 }
+add_one { n; n + 1 }
+
+5 -> double -> add_one  # => 11
+
+# Prefix: $ constructs a Currency
+Currency { amount, name, code, }
+
+@operator $ @prefix 900 { amount;
+	c = Currency()
+	c.amount = amount
+	c.name = 'US Dollar'
+	c.code = 'USD'
+	c
+}
+
+$42  # => Currency(amount: 42, name: 'US Dollar', code: 'USD')
+
+# Postfix: pm annotates a time value
+Time { hour, minute, period, }
+
+@operator : @infix 700 { hour, minute;
+	t = Time()
+	t.hour = hour
+	t.minute = minute
+	t
+}
+
+@operator pm @postfix 600 { left;
+	left.period = 'pm'
+	left
+}
+
+11:22pm  # => Time(hour: 11, minute: 22, period: 'pm')
+```
+
+See [operator_overloads.ore](examples/operator_overloads.ore) for more examples.
 
 ### Project Structure
 

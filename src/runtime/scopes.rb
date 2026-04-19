@@ -249,6 +249,10 @@ module Ore
 		def initialize values = []
 			super values
 		end
+
+		def inspect
+			"(#{values.map(&:inspect).join(', ')})"
+		end
 	end
 
 	class Number < Instance
