@@ -2229,6 +2229,23 @@ class Interpreter_Test < Base_Test
 		assert_match 'String', err.message
 	end
 
+	def test_manual_type_annotation_contract
+		err = assert_raises Ore::Type_Contract_Violation do
+			Ore.interp 'x: Number= 4, x = "hey"'
+		end
+		assert_match 'Number', err.message
+		assert_match 'String', err.message
+
+		# Fine if redeclared
+		Ore.interp 'x: Number= 4, x := "hey"'
+
+		err = assert_raises Ore::Type_Contract_Violation do
+			Ore.interp 'x: Number= 4, x := "hey", x = 8'
+		end
+		assert_match 'Number', err.message
+		assert_match 'String', err.message
+	end
+
 	def test_plain_equals_without_walrus_stays_dynamic
 		assert_equal 'anything', Ore.interp('x = 4, x = "anything", x')
 	end
