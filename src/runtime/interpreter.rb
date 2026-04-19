@@ -702,7 +702,14 @@ module Ore
 				returned = interpret expr.expression
 				Ore::Return.new returned
 			else
-				raise Ore::Unhandled_Prefix.new(expr, self)
+				overload_func = stack.reverse_each.find { |s| s.has? expr.operator.value }&.get(expr.operator.value)
+				if overload_func.is_a? Ore::Func
+					call           = Ore::Call_Expr.new
+					call.arguments = [expr.expression]
+					interp_func_body overload_func, call
+				else
+					raise Ore::Unhandled_Prefix.new(expr, self)
+				end
 			end
 		end
 
@@ -976,7 +983,18 @@ module Ore
 					end
 				end
 			else
-				if expr.left.value == Ore::RUNTIME_SCOPE_OPERATOR
+				# We're checking for operator overloads first, then the default operator functionality is the fallback. Operator overloads are normal functions that take its operands as arguments, declared on the stack. We're looking them up as if they were regular named functions.
+				overload_func = stack.reverse_each.find do |s|
+					s.has? expr.operator.value
+				end&.get(expr.operator.value)
+
+				if overload_func.is_a? Ore::Func
+					call           = Ore::Call_Expr.new
+					call.arguments = [expr.left, expr.right]
+					return interp_func_body overload_func, call
+				end
+
+				if expr.left.value == Ore::DIRECTIVE_OPERATOR
 					case expr.operator.value
 					when '+='
 						right = interpret expr.right
@@ -1041,9 +1059,22 @@ module Ore
 			end
 		end
 
+		# @param expr [Ore::Postfix_Expr]
 		def interp_postfix expr
 			# note: See constants.rb POSTFIX for exhaustive list of language-defined postfixes. Currently there are no built-in postfix operators.
-			raise Ore::Unhandled_Postfix.new(expr, self)
+			# 1) look up the opreator (expr.operator.value) as it should be a normal func in the scope.
+			# 2) call it with expr.expression as its argument. It should only take one argument.
+			postfix_overloaded_func = stack.reverse_each.find do |s|
+				s.has? expr.operator.value
+			end&.get(expr.operator.value)
+
+			if !postfix_overloaded_func
+				raise "Could not find #{expr.operator.value} declared anywhere man!"
+			end
+
+			call           = Ore::Call_Expr.new
+			call.arguments = [expr.expression]
+			interp_func_body postfix_overloaded_func, call
 		end
 
 		def interp_circumfix expr
@@ -1228,6 +1259,7 @@ module Ore
 
 		def interp_func expr
 			func                 = Ore::Func.new expr.lexeme
+			func.name            = expr.lexeme
 			func.enclosing_scope = stack.last
 			func.expressions     = expr.expressions
 
@@ -1807,6 +1839,14 @@ module Ore
 			end
 		end
 
+		# @param expr [Ore::Operator_Overload_Expr]
+		def interp_operator_overload expr
+			# expr attrs:  func_expr(Func_Expr)  fixity(Lexeme)  precedence(Int)  value(String)
+			# This is setting up operators to be treated as regular functions, whose identifier is its operator symbols without spaces.
+
+			stack.last.declare expr.value, interpret(expr.func_expr)
+		end
+
 		# note: This is the entry point for all expressions. This is called in a loop until all expressions are evaluated, or the program crashes.
 		def interpret expr
 			case expr
@@ -1873,6 +1913,9 @@ module Ore
 
 			when Ore::Comment_Expr
 				expr.value
+
+			when Ore::Operator_Overload_Expr
+				interp_operator_overload expr
 
 			when Ore::Operator_Expr
 				case expr.value
