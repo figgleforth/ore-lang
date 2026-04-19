@@ -880,4 +880,46 @@ class Parser_Test < Base_Test
 		# The 'html' marker should be stripped from body
 		refute html_fence.body.value.start_with?('html')
 	end
+
+	def test_operator_overload_parses
+		assert_raises Ore::Operator_Overload_Fixity_Must_Be_One_Of do
+			Ore.parse <<~CODE
+			    @operator := @heehee 500 { left, right; }
+			CODE
+		end
+
+		assert_raises Ore::Operator_Overload_Precedence_Must_Be_Integer do
+			Ore.parse <<~CODE
+			    @operator $ @prefix hmm { left, right; }
+			CODE
+		end
+
+		assert_raises Ore::Operator_Overload_Precedence_Must_Be_Integer do
+			Ore.parse <<~CODE
+			    @operator + @infix notanumber { left, right; }
+			CODE
+		end
+
+		out      = Ore.parse '@operator := @infix 500 { left, right; }'
+		overload = out.first
+		assert_instance_of Ore::Operator_Overload_Expr, overload
+		assert_equal ':=', overload.value
+		assert_equal 'infix', overload.fixity.value
+		assert_equal 500, overload.precedence
+		assert_instance_of Ore::Func_Expr, overload.func_expr
+
+		{ 'infix' => '~~', 'prefix' => '!!', 'postfix' => '??' }.each do |fixity, op|
+			refute_raises do
+				Ore.parse "@operator #{op} @#{fixity} 300 { x; x }"
+			end
+		end
+
+		# Operator is registered so it can appear in a subsequent expression as Infix_Expr
+		out   = Ore.parse "@operator ~> @infix 700 { left, right; left }\na ~> b"
+		infix = out.last
+		assert_instance_of Ore::Infix_Expr, infix
+		assert_equal '~>', infix.operator.value
+		assert_equal 'a', infix.left.value
+		assert_equal 'b', infix.right.value
+	end
 end

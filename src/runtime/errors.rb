@@ -158,4 +158,10 @@ module Ore
 			"Type contract violation: expected #{@contract}, got #{@actual || 'unknown'}"
 		end
 	end
+
+	class Operator_Overload_Fixity_Must_Be_One_Of < Error
+	end
+
+	class Operator_Overload_Precedence_Must_Be_Integer < Error
+	end
 end

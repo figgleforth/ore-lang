@@ -1,10 +1,15 @@
 module Ore
 	class Parser
-		attr_accessor :i, :input
+		attr_accessor :i, :input, :precedences
 
 		def initialize input = []
-			@input = input
-			@i     = 0 # index of current lexeme
+			@precedences = PRECEDENCES.dup
+			# Track these so that they can be considered during parse-time
+			@custom_infix   = ::Set.new
+			@custom_prefix  = ::Set.new
+			@custom_postfix = ::Set.new
+			@input          = input
+			@i              = 0 # index of current lexeme
 		end
 
 		def input= value
@@ -24,16 +29,43 @@ module Ore
 		end
 
 		def output
+			scan_and_register_operator_overloads_before_parsing # This has to be done before parsing because overloaded operators have to set their precedence level, which if done at runtime would the behavior of #precedence_for that now depends on an updated prcedence table with new precedences added.
+
 			expressions = []
 			while lexemes?
 				expressions << parse_expression
 			end
+
 			expressions.compact
 		end
 
-		# Array of precedences and symbols for that precedence. if the lexeme provided matches one of the operator symbols then its precedence is returned. Nice reference: https://rosettacode.org/wiki/Operator_precedence
+		def scan_and_register_operator_overloads_before_parsing
+			# The pattern:    @   operator   {user_operator}   @   {fixity}   {precedence_integer}
+			#                 t0  t1          user_operator    t3   fixity     prec
+			input.each_cons(6) do |t0, t1, user_operator, t3, fixity, prec|
+				next unless t0.value == '@' && t1.value == 'operator' && t3.value == '@'
+
+				fixities = %w(infix prefix postfix circumfix)
+				raise Operator_Overload_Fixity_Must_Be_One_Of.new(fixities) unless fixities.include? fixity.value
+				raise Operator_Overload_Precedence_Must_Be_Integer.new(prec) unless prec.type == :number
+
+				# note: I know this allows users to overload precedence. Sounds fun.
+				@precedences[user_operator.value] = prec.value.to_i
+
+				case fixity.value
+				when 'infix' then @custom_infix << user_operator.value
+				when 'prefix' then @custom_prefix << user_operator.value
+				when 'postfix' then @custom_postfix << user_operator.value
+				end
+			end
+		end
+
+		# If the given operator doesn't exist then it returns Ore::DEFAULT_OPERATOR_PRECEDENCE which binds somewhere around the equality operators. See Ore::PRECEDENCES
+		# Neat reference for precedences: https://rosettacode.org/wiki/Operator_precedence
+		# @param operator [::String]
+		# @return precedence [Integer]
 		def precedence_for operator
-			PRECEDENCES[operator] || STARTING_PRECEDENCE
+			@precedences[operator] || DEFAULT_OPERATOR_PRECEDENCE
 		end
 
 		# input[i - 1]
@@ -237,7 +269,7 @@ module Ore
 			until curr? Ore::FUNCTION_DELIMITER
 				param        = Ore::Param_Expr.new
 
-				if curr? Ore::RUNTIME_SCOPE_OPERATOR and eat Ore::RUNTIME_SCOPE_OPERATOR
+				if curr? Ore::DIRECTIVE_OPERATOR and eat Ore::DIRECTIVE_OPERATOR
 					param.unpack = true
 				end
 
@@ -358,7 +390,7 @@ module Ore
 
 			expr = Ore::Identifier_Expr.new
 
-			if curr? RUNTIME_SCOPE_OPERATOR and eat RUNTIME_SCOPE_OPERATOR
+			if curr? DIRECTIVE_OPERATOR and eat DIRECTIVE_OPERATOR
 				expr.directive = true
 			elsif curr? SCOPE_OPERATORS
 				expr.scope_operator = parse_scope_operator
@@ -525,7 +557,7 @@ module Ore
 			elsif curr? %w(if while unless until)
 				parse_conditional_expr
 
-			elsif curr?(:identifier, ':', :Identifier) || curr?(ANY_IDENTIFIER) || curr?(Ore::RUNTIME_SCOPE_OPERATOR, :identifier) || curr?(SCOPE_OPERATORS, ANY_IDENTIFIER) || curr?(RUNTIME_SCOPE_OPERATOR, :identifier)
+			elsif curr?(:identifier, ':', :Identifier) || curr?(ANY_IDENTIFIER) || curr?(Ore::DIRECTIVE_OPERATOR, :identifier) || curr?(SCOPE_OPERATORS, ANY_IDENTIFIER) || curr?(DIRECTIVE_OPERATOR, :identifier)
 				parse_identifier_expr
 
 			elsif curr?(%w( [ \( { |)) && curr?(:delimiter)
@@ -594,11 +626,52 @@ module Ore
 
 			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'super'
 				# note: I'm intentionally skipping `super` here because a Directive_Expr assumes an expression will follow it. But in the case of @super, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
-				directive            = Ore::Directive_Expr.new
-				directive.name       = expr
-				directive.expression = parse_expression
-
+				directive      = Ore::Directive_Expr.new
+				directive.name = expr
 				copy_location directive, expr
+
+				# Here I'm intercepting when an @operator directive is found, so that I can prebuild a special expression for operator overloads. Just FYI, this massive if body ends with a return statement,
+				if expr.value == 'operator'
+					unless curr? %i(operator identifier)
+						raise "@operator directive requires an operator identifier made of symbols. Hold shift and press some numbers... rules tbd!"
+					end
+					op_lexeme            = eat # Eat the :operator or :identifier token directly. Going through parse_expression would apply custom fixity rules that are pre-registered and would misparse the operator in its own declaration.
+					unless %i(operator identifier).include? op_lexeme.type
+						raise "An operator can only by an operator or identifier.. what a stupid message."
+					end
+					operator_expr        = Ore::Operator_Expr.new op_lexeme
+					directive.expression = operator_expr
+					copy_location operator_expr, op_lexeme
+
+					# If @operator <Op_Expr> is followed by @infix <Num_Expr> then we have a complete operator overload expression
+					next_expr = begin_expression
+					if next_expr.is_a?(Ore::Identifier_Expr) && next_expr.directive
+						if %w(prefix infix postfix circumfix).include? next_expr.value
+							subdirective      = Ore::Directive_Expr.new
+							subdirective.name = next_expr
+							copy_location subdirective, next_expr
+
+							subdirective.expression = parse_expression
+							unless subdirective.expression.is_a?(Ore::Number_Expr)
+								raise "an operator overload requires the following form: `@operator + @infix 90 {left, right; ...}`"
+							end
+
+							# If you can't wrap your mind around this. At this point we know `@operator + @infix 90` so all that's left to parse is the function
+							overload            = Ore::Operator_Overload_Expr.new operator_expr.lexeme
+							overload.fixity     = subdirective.name.lexeme
+							overload.precedence = subdirective.expression.value
+							overload.func_expr  = parse_func
+							overload.value      = operator_expr.lexeme.value
+
+							return complete_expression overload, precedence
+						end
+					else
+						return complete_expression next_expr, precedence
+					end
+				else
+					directive.expression = parse_expression
+				end
+
 				return complete_expression directive, precedence
 			end
 
@@ -616,9 +689,9 @@ module Ore
 				return complete_expression next_expr, precedence
 			end
 
-			prefix    = PREFIX.include?(expr.value)
-			infix     = INFIX.include?(curr_lexeme.value)
-			postfix   = POSTFIX.include?(curr_lexeme.value)
+			prefix    = !expr.is_a?(Ore::Operator_Overload_Expr) && (PREFIX.include?(expr.value) || (expr.is_a?(Ore::Operator_Expr) && @custom_prefix.include?(expr.value)))
+			infix     = INFIX.include?(curr_lexeme.value) || @custom_infix.include?(curr_lexeme.value)
+			postfix   = POSTFIX.include?(curr_lexeme.value) || @custom_postfix.include?(curr_lexeme.value)
 			circumfix = CIRCUMFIX.include?(curr_lexeme.value)
 
 			if prefix
@@ -657,7 +730,7 @@ module Ore
 					copy_location it, expr
 					return complete_expression it, precedence
 				else
-					while INFIX.include?(curr_lexeme.value) && curr?(:operator)
+					while (INFIX.include?(curr_lexeme.value) || @custom_infix.include?(curr_lexeme.value)) && curr?(:operator)
 						# It's very important that the curr?(:operator) check here remains because otherwise it breaks Ore::Call_Expr when the receiver is an Ore::Infix_Expr.
 						curr_operator      = curr_lexeme.value
 						curr_operator_prec = precedence_for curr_operator
@@ -686,10 +759,10 @@ module Ore
 					end
 				end
 
-			elsif postfix
+			elsif postfix && precedence_for(curr_lexeme.value) > precedence
 				expr = Ore::Postfix_Expr.new.tap do |it|
 					it.expression = expr
-					it.operator   = eat(:operator)
+					it.operator   = eat(%i(operator identifier))
 				end
 			end
 

@@ -375,7 +375,7 @@ class Lexer_Test < Base_Test
 	def test_unpack_prefix
 		out = Ore.lex '@instance_to_unpack'
 		assert_equal :operator, out.first.type
-		assert_equal Ore::RUNTIME_SCOPE_OPERATOR, out.first.value
+		assert_equal Ore::UNPACK_OPERATOR, out.first.value
 		assert_equal :identifier, out.last.type
 		assert_equal 'instance_to_unpack', out.last.value
 	end

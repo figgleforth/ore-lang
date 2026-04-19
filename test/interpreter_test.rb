@@ -2203,7 +2203,7 @@ class Interpreter_Test < Base_Test
 	# if abc exists, use that value
 	# if not abc exists, declare abc=nil
 	def test_walrus_basic_assignment
-		assert_equal 4,       Ore.interp('x := 4, x')
+		assert_equal 4, Ore.interp('x := 4, x')
 		assert_equal 'hello', Ore.interp('x := "hello", x')
 	end
 
@@ -2245,5 +2245,107 @@ class Interpreter_Test < Base_Test
 		    abc=2, (abc,1),
 		CODE
 		assert_equal [2, 1], out.values
+	end
+
+	def test_neat_usage_of_operator_overloads
+		prelude = <<~CODE
+		    Time {
+		    	hour, minute, second,
+		    	period, # am/pm
+		    }
+
+		    @operator : @infix 700 { hour, minute;
+		    	time = Time()
+		    	time.hour = hour
+		    	time.minute = minute
+		    	time
+		    }
+
+		    @operator pm @postfix 600 { left: Time;
+		        left.period = 'pm'
+		        left
+		    }
+		CODE
+
+		out = Ore.interp <<~CODE
+		    #{prelude}
+			# You can now make `11:22pm` evaluate to something!
+			11:22pm
+		CODE
+		assert_instance_of Ore::Instance, out
+		assert_equal 11, out.get('hour')
+		assert_equal 22, out.get('minute')
+		assert_equal 'pm', out.get('period')
+	end
+
+	def test_prefix_operator_overload
+		out = Ore.interp <<~CODE
+		    Currency {
+		    	amount,
+		    	name,
+		    	code,
+		    }
+
+		    @operator $ @prefix 900 { amount;
+		    	c = Currency()
+		    	c.amount = amount
+		    	c.name = 'US Dollar'
+		    	c.code = 'USD'
+		    	c
+		    }
+
+		    $42
+		CODE
+		assert_instance_of Ore::Instance, out
+		assert_equal 42, out.get('amount')
+		assert_equal 'US Dollar', out.get('name')
+		assert_equal 'USD', out.get('code')
+	end
+
+	def test_operator_overload_scoped_to_function
+		out = Ore.interp <<~CODE
+		    scoped_result = compute {;
+		    	@operator + @infix 700 { left, right;
+		    		left * right
+		    	}
+		    	3 + 4
+		    }
+
+		    normal_result = 3 + 4
+
+		    [scoped_result(), normal_result]
+		CODE
+
+		assert_equal [12, 7], out.values
+	end
+
+	def test_whacky_prefix_operator_overload
+		out = Ore.interp <<~CODE
+		    @operator !! @prefix 900 { n;
+		    	n * n
+		    }
+
+		    !!5
+		CODE
+		assert_equal 25, out
+	end
+
+	def test_pipeing_with_operator_overloads
+		out = Ore.interp <<~CODE
+		    @operator -> @infix 300 { left, right;
+		    	right(left)
+		    }
+
+		    double { n;
+				n * 2
+			}
+
+		    add_fifteen { n;
+				n + 15
+			}
+
+		    4 -> double -> add_fifteen
+		CODE
+		assert_equal 23, out
 	end
 end

@@ -130,6 +130,10 @@ module Ore
 		attr_accessor :custom, :precedence
 	end
 
+	class Operator_Overload_Expr < Expression
+		attr_accessor :func_expr, :fixity, :precedence
+	end
+
 	class Identifier_Expr < Expression
 		attr_accessor :kind, :unpack, :scope_operator, :directive, :privacy, :binding
 	end
