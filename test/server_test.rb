@@ -70,7 +70,7 @@ class Server_Test < Base_Test
 		interpreter = Ore::Interpreter.new
 		interpreter.run code
 
-		assert_equal 2, interpreter.routes.count
+		assert_equal 2, interpreter.route_function_handlers_by_route_name.count
 	end
 
 	def test_server_runner_initialization
@@ -120,7 +120,7 @@ class Server_Test < Base_Test
 		interpreter = Ore::Interpreter.new
 		interpreter.run code
 
-		assert_equal 2, interpreter.routes.count
+		assert_equal 2, interpreter.route_function_handlers_by_route_name.count
 	end
 
 	def test_route_matching
@@ -147,7 +147,7 @@ class Server_Test < Base_Test
 
 		interpreter     = Ore::Interpreter.new
 		server_instance = interpreter.run code
-		routes          = interpreter.routes
+		routes          = interpreter.route_function_handlers_by_route_name
 
 		matched = interpreter.match_route 'get', ['users', '123'], routes
 		assert matched
@@ -181,7 +181,7 @@ class Server_Test < Base_Test
 
 		interpreter = Ore::Interpreter.new
 		interpreter.run code
-		route      = interpreter.routes.values.first
+		route      = interpreter.route_function_handlers_by_route_name.values.first
 		path_parts = ['users', '42', 'posts', '99']
 		url_params = interpreter.extract_url_params path_parts, route
 

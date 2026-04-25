@@ -71,7 +71,7 @@ Source code is tokenized, parsed into an AST, and statically type checked:
 
 The AST is executed to produce output:
 
-- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, and all execution state (`stack`, `routes`, `servers`, `loaded_files`, etc.); `run(source)` is the entry point; handles file loading via `load_file_into_scope`
+- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, and all execution state (`stack`, `routes`, `servers`, `cached_expressions_by_filepath`, etc.); `run(source)` is the entry point; handles file loading via `load_file_into_scope`
 - `scopes.rb` - All scope types and built-in types:
 	- `Global < Scope` - The global scope; pushed as the bottom of the stack on first `run`; standard library declarations live here
 	- `Type`, `Instance`, `Func`, `Route`, `Return` - Scope hierarchy
@@ -760,6 +760,6 @@ Styled_Div | Dom {
 
 The `@use` directive allows importing Ore files:
 
-.- Interpreter tracks loaded files in `@loaded_files` to prevent duplicate parsing
+- Interpreter caches parsed expressions in `@cached_expressions_by_filepath` to prevent duplicate parsing
 - Files are loaded into a specified scope via `Interpreter#load_file_into_scope`
-- Expressions are cached in `@loaded_files` keyed by resolved filepath
+- Expressions are cached keyed by resolved filepath

@@ -58,7 +58,7 @@ module Ore
 			return nil unless runtime
 
 			source_file = get_source_file
-			lines       = runtime.source_files[source_file] || []
+			lines       = runtime.cached_source_by_filename[source_file] || []
 			return nil if lines.empty?
 
 			# Determine snippet boundaries

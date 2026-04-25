@@ -4,20 +4,22 @@ require 'json'
 
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :last_output
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :route_function_handlers_by_route_name, :servers, :dom_onclick_function_handlers, :dom_input_elements, :cached_expressions_by_filepath, :cached_source_by_filename, :last_output
 
 		def initialize
+			@cached_expressions_by_filepath        = {} # {filepath: [Ore::Expression]}
+			@cached_source_by_filename             = {} # {filepath: String}
+			@dom_input_elements                    = {} # {element_hash: Ore::Instance} for inputs/textareas
+			@dom_onclick_function_handlers         = {} # {handler_hash: Ore::Func}
+			@route_function_handlers_by_route_name = {} # {route: Ore::Route}
+
 			@load_standard_library = true
 			@input                 = [] # [Ore::Expression]
 			@stack                 = [] # [Ore::Scope]
 			@servers               = [] # [Ore::Server]
-			@routes                = {} # {route: Ore::Route}
-			@loaded_files          = {} # {filename: [Ore::Expression]}
-			@source_files          = {} # {filepath: String} for error reporting
-			@onclick_handlers      = {} # {handler_hash: Ore::Func}
-			@input_elements        = {} # {element_hash: Ore::Instance} for inputs/textareas
-			@lexer                 = Lexer.new
-			@parser                = Parser.new
+
+			@lexer  = Lexer.new
+			@parser = Parser.new
 		end
 
 		def run source_code
@@ -81,16 +83,16 @@ module Ore
 
 			push_scope into_scope
 
-			unless @loaded_files[resolved_path]
+			unless @cached_expressions_by_filepath[resolved_path]
 				code = File.read resolved_path
 				register_source resolved_path, code
-				@lexer.input                 = code
-				@parser.input                = @lexer.output
-				@loaded_files[resolved_path] = @parser.output
+				@lexer.input                                   = code
+				@parser.input                                  = @lexer.output
+				@cached_expressions_by_filepath[resolved_path] = @parser.output
 			end
 
 			saved  = @input
-			@input = @loaded_files[resolved_path]
+			@input = @cached_expressions_by_filepath[resolved_path]
 			result = output # note: Okay to call #output directly here
 			@input = saved
 
@@ -119,19 +121,19 @@ module Ore
 		end
 
 		def register_source filepath, source_code
-			resolved               = filepath ? File.expand_path(filepath) : '<inline>'
-			source_files[resolved] = source_code.lines.map(&:chomp)
+			resolved                            = filepath ? File.expand_path(filepath) : '<inline>'
+			cached_source_by_filename[resolved] = source_code.lines.map(&:chomp)
 		end
 
 		def add_onclick_handler handler
-			key                   = handler.hash
-			onclick_handlers[key] = handler
+			key                                = handler.hash
+			dom_onclick_function_handlers[key] = handler
 			key
 		end
 
 		def add_input_element instance
-			key                 = instance.hash
-			input_elements[key] = instance
+			key                     = instance.hash
+			dom_input_elements[key] = instance
 			key
 		end
 
@@ -314,14 +316,14 @@ module Ore
 
 			if path_string.start_with?("/onclick/")
 				object_id = path_parts.last.to_i
-				handler   = onclick_handlers[object_id]
+				handler   = dom_onclick_function_handlers[object_id]
 				if handler
 					begin
 						if request.body && !request.body.empty?
 							json_body = JSON.parse request.body rescue {}
 							inputs = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
-								input_instance = input_elements[element_id.to_i]
+								input_instance = dom_input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
 							end
 						end
@@ -1371,7 +1373,7 @@ module Ore
 				enclosing_type.routes[route_key] = route
 			end
 
-			@routes[route_key] = route
+			@route_function_handlers_by_route_name[route_key] = route
 			stack.last.declare route_key, route
 
 			route
