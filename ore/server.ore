@@ -12,8 +12,9 @@ Response {
 	headers,
 	body,
 
-	redirect { location; @super }
+	redirect { location; @ruby }
 }
+
 
 Server {
 	port,
@@ -22,14 +23,13 @@ Server {
 		.port = port
 	}
 
-	# note: The following routes prevent 500 errors since we're handling all routes here, nothing is filtered.
-	get://favicon.ico {;
+	ok200 {;
 		response.status = 200
 		''
 	}
 
-	get://apple-touch-icon-precomposed.png {;
-		response.status = 200
-		''
-	}
+	# note: The following routes prevent 500 errors since we're handling all routes here, nothing is filtered.
+	get://favicon.ico ok200
+
+	get://apple-touch-icon-precomposed.png ok200
 }

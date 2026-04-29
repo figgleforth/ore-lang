@@ -10,24 +10,24 @@ String {
 		.value = value
 	}
 
-	downcase {; @super }
-	upcase {; @super }
-	split { delimiter = nil; @super } # todo: Without the default nil value, .split() fails
-    slice { substr; @super }
-    trim {; @super }
-	trim_left {; @super }
-	trim_right {; @super }
-    chars {; @super }
-    index { substr; @super }
-    to_i {; @super }
-    to_f {; @super }
-	empty? {; @super }
-	include? { substr; @super }
-	reverse {; @super }
-	replace { new; @super }
-	start_with? { prefix; @super }
-	end_with? { suffix; @super }
-	gsub { pattern, replacement; @super }
+	downcase {; @ruby }
+	upcase {; @ruby }
+	split { delimiter = nil; @ruby } # todo: Without the default nil value, .split() fails
+    slice { substr; @ruby }
+    trim {; @ruby }
+	trim_left {; @ruby }
+	trim_right {; @ruby }
+    chars {; @ruby }
+    index { substr; @ruby }
+    to_i {; @ruby }
+    to_f {; @ruby }
+	empty? {; @ruby }
+	include? { substr; @ruby }
+	reverse {; @ruby }
+	replace { new; @ruby }
+	start_with? { prefix; @ruby }
+	end_with? { suffix; @ruby }
+	gsub { pattern, replacement; @ruby }
 
-	to_md5_hash {; @super }
+	to_md5_hash {; @ruby }
 }

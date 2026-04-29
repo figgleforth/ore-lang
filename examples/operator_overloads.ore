@@ -92,3 +92,16 @@ outer = 3 + 4
 @assert outer == 7
 
 (outer, result)
+
+
+```
+Alternate syntax to consider
+
+@prefix $ 900 { amount;
+	c = Currency()
+	c.amount = amount
+	c.name = 'US Dollar'
+	c.code = 'USD'
+	c
+}
+```

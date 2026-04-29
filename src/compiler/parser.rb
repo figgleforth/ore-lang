@@ -624,8 +624,8 @@ module Ore
 		def complete_expression expr, precedence = STARTING_PRECEDENCE
 			return expr unless expr && lexemes?
 
-			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'super'
-				# note: I'm intentionally skipping `super` here because a Directive_Expr assumes an expression will follow it. But in the case of @super, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
+			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'ruby'
+				# note: I'm intentionally skipping `ruby` here because a Directive_Expr assumes an expression will follow it. But in the case of @ruby, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
 				directive      = Ore::Directive_Expr.new
 				directive.name = expr
 				copy_location directive, expr

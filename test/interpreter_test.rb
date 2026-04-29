@@ -1804,16 +1804,16 @@ class Interpreter_Test < Base_Test
 		out = Ore.interp "'WALT!'.downcase()"
 		assert_equal "walt!", out
 
-		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
-			Ore.interp "@super whatever"
+		assert_raises Ore::Invalid_Ruby_Proxy_Directive_Usage do
+			Ore.interp "@ruby whatever"
 		end
 
-		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
-			Ore.interp "@super 123"
+		assert_raises Ore::Invalid_Ruby_Proxy_Directive_Usage do
+			Ore.interp "@ruby 123"
 		end
 
-		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
-			Ore.interp "Type { @super 123, }"
+		assert_raises Ore::Invalid_Ruby_Proxy_Directive_Usage do
+			Ore.interp "Type { @ruby 123, }"
 		end
 	end
 
@@ -2111,7 +2111,7 @@ class Interpreter_Test < Base_Test
 		code = <<~CODE
 		    String | String {
 		        upcase {;
-		        	@super + " (SWIZZLED)"
+		        	@ruby + " (SWIZZLED)"
 		        }
 		    }
 			"test".upcase()

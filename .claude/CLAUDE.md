@@ -314,7 +314,7 @@ thingy { @island;
 
 ## Built-in Types and Intrinsic Methods
 
-Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that delegate to Ruby's native implementations. These methods are declared using a `proxy_` prefix (see src/shared/super_proxies.rb)
+Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that delegate to Ruby's native implementations. These methods are declared using a `proxy_` prefix (see src/shared/ruby_proxies.rb)
 
 ### Intrinsic Method Implementation Pattern
 
@@ -322,8 +322,8 @@ Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that 
 
 ```ore
 String {
-    upcase {; @super }
-    downcase {; @super }
+    upcase {; @ruby }
+    downcase {; @ruby }
 }
 ```
 
@@ -332,7 +332,7 @@ String {
 ```ruby
 
 class String < Instance
-	extend Super_Proxies
+	extend Ruby_Proxies
 
 	proxy_delegate 'value' # Delegate to @value
 	proxy :upcase # Calls @value.upcase

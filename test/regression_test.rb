@@ -363,7 +363,7 @@ class Regression_Test < Base_Test
 	end
 
 	def test_broken_static_declarations
-		refute_raises Ore::Missing_Super_Proxy_Declaration do
+		refute_raises Ore::Missing_Ruby_Proxy_Declaration do
 			Ore.interp <<~ORE
 			    Thing {
 			    	./abc,

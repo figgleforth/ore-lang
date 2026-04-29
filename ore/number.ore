@@ -8,16 +8,16 @@ Number {
 		.denominator = 1
 	}
 
-	clamp { min, max; @super }
-	./rand { max; @super }
-	to_s {; @super }
-	abs {; @super }
-	floor {; @super }
-	ceil {; @super }
-	round {; @super }
-	sqrt {; @super }
-	even? {; @super }
-	odd? {; @super }
-	to_i {; @super }
-	to_f {; @super }
+	clamp { min, max; @ruby }
+	./rand { max; @ruby }
+	to_s {; @ruby }
+	abs {; @ruby }
+	floor {; @ruby }
+	ceil {; @ruby }
+	round {; @ruby }
+	sqrt {; @ruby }
+	even? {; @ruby }
+	odd? {; @ruby }
+	to_i {; @ruby }
+	to_f {; @ruby }
 }

@@ -5,24 +5,24 @@ Array {
 		.values = values
 	}
 
-	push { item; @super }
-	random {; @super }
-	pop {; @super }
-	shift {; @super }
-	unshift { item; @super }
-	length {; @super }
-	first { count; @super }
-	last { count; @super }
-	slice { from, to; @super }
-	reverse {; @super }
-	join { separator; @super }
-	concat { other; @super }
-	flatten {; @super }
-	sort {; @super }
-	uniq {; @super }
-	include? { item; @super }
-	empty? {; @super }
-	get { index; @super }
+	push { item; @ruby }
+	random {; @ruby }
+	pop {; @ruby }
+	shift {; @ruby }
+	unshift { item; @ruby }
+	length {; @ruby }
+	first { count; @ruby }
+	last { count; @ruby }
+	slice { from, to; @ruby }
+	reverse {; @ruby }
+	join { separator; @ruby }
+	concat { other; @ruby }
+	flatten {; @ruby }
+	sort {; @ruby }
+	uniq {; @ruby }
+	include? { item; @ruby }
+	empty? {; @ruby }
+	get { index; @ruby }
 
 	find { func;
 		for values

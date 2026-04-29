@@ -1734,11 +1734,11 @@ module Ore
 			when 'assert'
 				condition = interpret expr.expression
 				raise "assert failed #{expr.inspect}" unless condition
-			when 'super'
-				# The @super directive evaluates to the result of calling the ruby Ruby method
+			when 'ruby'
+				# The @ruby directive evaluates to the result of calling the ruby Ruby method
 				func_scope = stack.last
 				unless func_scope.is_a? Ore::Func
-					raise Ore::Invalid_Super_Proxy_Directive_Usage.new func_scope, self
+					raise Ore::Invalid_Ruby_Proxy_Directive_Usage.new func_scope, self
 				end
 
 				func_name        = func_scope.name
@@ -1761,7 +1761,7 @@ module Ore
 				end
 
 				unless target.respond_to? proxy_method
-					raise Ore::Missing_Super_Proxy_Declaration.new expr, self
+					raise Ore::Missing_Ruby_Proxy_Declaration.new expr, self
 				end
 
 				result = target.send proxy_method, *func_scope.arguments
@@ -1816,8 +1816,8 @@ module Ore
 				# todo: Allow builtins to be extended by the user. Requirements would be:
 				#   1) Create type in Ore
 				#   2) Create equivalent type in scopes.rb or similar
-				#   3) Make sure functions which use the @super expression in its body are named in to match the Ore::Type "proxy_#{func_name}"
-				# For example, `String { upcase {; @super } }` maps to `Ore::String@super_upcase`
+				#   3) Make sure functions which use the @ruby expression in its body are named in to match the Ore::Type "proxy_#{func_name}"
+				# For example, `String { upcase {; @ruby } }` maps to `Ore::String@ruby_upcase`
 				raise Ore::Invalid_Directive_Usage.new(expr, self)
 			end
 		end

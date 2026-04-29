@@ -97,11 +97,11 @@ module Ore
 		# todo: This is not printing anything to stdouts
 	end
 
-	class Missing_Super_Proxy_Declaration < Error
+	class Missing_Ruby_Proxy_Declaration < Error
 	end
 
-	class Invalid_Super_Proxy_Directive_Usage < Error
-		# @super directive only supports function and variable declarations in the body of a Type declaration
+	class Invalid_Ruby_Proxy_Directive_Usage < Error
+		# @ruby directive only supports function and variable declarations in the body of a Type declaration
 	end
 
 	class Invalid_Static_Directive_Declaration < Error

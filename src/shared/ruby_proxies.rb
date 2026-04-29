@@ -1,4 +1,4 @@
-module Super_Proxies
+module Ruby_Proxies
 	def proxy_delegate object_name
 		define_method "_proxy_delegate_" do |*args|
 			send object_name
