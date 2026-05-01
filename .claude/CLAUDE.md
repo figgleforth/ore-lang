@@ -573,7 +573,7 @@ Tests use Minitest and inherit from `Base_Test` (in test/base_test.rb):
 - `test/lexer_test.rb` - Lexer tests
 - `test/parser_test.rb` - Parser tests
 - `test/interpreter_test.rb` - Interpreter tests
-- `test/proxies_test.rb` - Super Proxy method tests
+- `test/proxies_test.rb` - Ruby Proxy method tests
 - `test/regression_test.rb` - Regression tests
 - `test/server_test.rb` - Server and routing tests
 - `test/e2e_server_test.rb` - End-to-end server tests
