@@ -3,10 +3,10 @@ Database {
 	connection, # todo: Make a type for this, currently it stores an Sequel::SQLite::Database instance
 	url,
 
-	create_table { name, columns_dict; @super }
-	delete_table { name; @super }
-	tables {; @super }
-	table_exists? { name; @super }
+	create_table { name, columns_dict; @ruby }
+	delete_table { name; @ruby }
+	tables {; @ruby }
+	table_exists? { name; @ruby }
 }
 
 Sqlite | Database {

@@ -71,7 +71,7 @@ Source code is tokenized, parsed into an AST, and statically type checked:
 
 The AST is executed to produce output:
 
-- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, and all execution state (`stack`, `routes`, `servers`, `loaded_files`, etc.); `run(source)` is the entry point; handles file loading via `load_file_into_scope`
+- `interpreter.rb` - The running program; owns `@lexer`, `@parser`, and all execution state (`stack`, `routes`, `servers`, `cached_expressions_by_filepath`, etc.); `run(source)` is the entry point; handles file loading via `load_file_into_scope`
 - `scopes.rb` - All scope types and built-in types:
 	- `Global < Scope` - The global scope; pushed as the bottom of the stack on first `run`; standard library declarations live here
 	- `Type`, `Instance`, `Func`, `Route`, `Return` - Scope hierarchy
@@ -314,7 +314,7 @@ thingy { @island;
 
 ## Built-in Types and Intrinsic Methods
 
-Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that delegate to Ruby's native implementations. These methods are declared using a `proxy_` prefix (see src/shared/super_proxies.rb)
+Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that delegate to Ruby's native implementations. These methods are declared using a `proxy_` prefix (see src/shared/ruby_proxies.rb)
 
 ### Intrinsic Method Implementation Pattern
 
@@ -322,8 +322,8 @@ Ore's built-in types (String, Array, Dictionary, Number) have ruby methods that 
 
 ```ore
 String {
-    upcase {; @super }
-    downcase {; @super }
+    upcase {; @ruby }
+    downcase {; @ruby }
 }
 ```
 
@@ -332,7 +332,7 @@ String {
 ```ruby
 
 class String < Instance
-	extend Super_Proxies
+	extend Ruby_Proxies
 
 	proxy_delegate 'value' # Delegate to @value
 	proxy :upcase # Calls @value.upcase
@@ -573,7 +573,7 @@ Tests use Minitest and inherit from `Base_Test` (in test/base_test.rb):
 - `test/lexer_test.rb` - Lexer tests
 - `test/parser_test.rb` - Parser tests
 - `test/interpreter_test.rb` - Interpreter tests
-- `test/proxies_test.rb` - Super Proxy method tests
+- `test/proxies_test.rb` - Ruby Proxy method tests
 - `test/regression_test.rb` - Regression tests
 - `test/server_test.rb` - Server and routing tests
 - `test/e2e_server_test.rb` - End-to-end server tests
@@ -760,6 +760,6 @@ Styled_Div | Dom {
 
 The `@use` directive allows importing Ore files:
 
-.- Interpreter tracks loaded files in `@loaded_files` to prevent duplicate parsing
+- Interpreter caches parsed expressions in `@cached_expressions_by_filepath` to prevent duplicate parsing
 - Files are loaded into a specified scope via `Interpreter#load_file_into_scope`
-- Expressions are cached in `@loaded_files` keyed by resolved filepath
+- Expressions are cached keyed by resolved filepath

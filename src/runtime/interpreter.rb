@@ -4,20 +4,22 @@ require 'json'
 
 module Ore
 	class Interpreter
-		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :routes, :servers, :onclick_handlers, :input_elements, :loaded_files, :source_files, :last_output
+		attr_accessor :input, :lexer, :parser, :load_standard_library, :stack, :route_function_handlers_by_route_name, :servers, :dom_onclick_function_handlers, :dom_input_elements, :cached_expressions_by_filepath, :cached_source_by_filename, :last_output
 
 		def initialize
+			@cached_expressions_by_filepath        = {} # {filepath: [Ore::Expression]}
+			@cached_source_by_filename             = {} # {filepath: String}
+			@dom_input_elements                    = {} # {element_hash: Ore::Instance} for inputs/textareas
+			@dom_onclick_function_handlers         = {} # {handler_hash: Ore::Func}
+			@route_function_handlers_by_route_name = {} # {route: Ore::Route}
+
 			@load_standard_library = true
 			@input                 = [] # [Ore::Expression]
 			@stack                 = [] # [Ore::Scope]
 			@servers               = [] # [Ore::Server]
-			@routes                = {} # {route: Ore::Route}
-			@loaded_files          = {} # {filename: [Ore::Expression]}
-			@source_files          = {} # {filepath: String} for error reporting
-			@onclick_handlers      = {} # {handler_hash: Ore::Func}
-			@input_elements        = {} # {element_hash: Ore::Instance} for inputs/textareas
-			@lexer                 = Lexer.new
-			@parser                = Parser.new
+
+			@lexer  = Lexer.new
+			@parser = Parser.new
 		end
 
 		def run source_code
@@ -81,16 +83,16 @@ module Ore
 
 			push_scope into_scope
 
-			unless @loaded_files[resolved_path]
+			unless @cached_expressions_by_filepath[resolved_path]
 				code = File.read resolved_path
 				register_source resolved_path, code
-				@lexer.input                 = code
-				@parser.input                = @lexer.output
-				@loaded_files[resolved_path] = @parser.output
+				@lexer.input                                   = code
+				@parser.input                                  = @lexer.output
+				@cached_expressions_by_filepath[resolved_path] = @parser.output
 			end
 
 			saved  = @input
-			@input = @loaded_files[resolved_path]
+			@input = @cached_expressions_by_filepath[resolved_path]
 			result = output # note: Okay to call #output directly here
 			@input = saved
 
@@ -119,19 +121,19 @@ module Ore
 		end
 
 		def register_source filepath, source_code
-			resolved               = filepath ? File.expand_path(filepath) : '<inline>'
-			source_files[resolved] = source_code.lines.map(&:chomp)
+			resolved                            = filepath ? File.expand_path(filepath) : '<inline>'
+			cached_source_by_filename[resolved] = source_code.lines.map(&:chomp)
 		end
 
 		def add_onclick_handler handler
-			key                   = handler.hash
-			onclick_handlers[key] = handler
+			key                                = handler.hash
+			dom_onclick_function_handlers[key] = handler
 			key
 		end
 
 		def add_input_element instance
-			key                 = instance.hash
-			input_elements[key] = instance
+			key                     = instance.hash
+			dom_input_elements[key] = instance
 			key
 		end
 
@@ -314,14 +316,14 @@ module Ore
 
 			if path_string.start_with?("/onclick/")
 				object_id = path_parts.last.to_i
-				handler   = onclick_handlers[object_id]
+				handler   = dom_onclick_function_handlers[object_id]
 				if handler
 					begin
 						if request.body && !request.body.empty?
 							json_body = JSON.parse request.body rescue {}
 							inputs = json_body['inputs'] || {}
 							inputs.each do |element_id, value|
-								input_instance = input_elements[element_id.to_i]
+								input_instance = dom_input_elements[element_id.to_i]
 								input_instance.declare 'value', value if input_instance
 							end
 						end
@@ -839,6 +841,13 @@ module Ore
 			else
 				# @copypaste from #interp_dot_scope because we already interpreted expr as 'left'. If #interp_dot_scope interprets expr again, we end up with duplicate duplicate isntnatiations
 
+				if expr.right.instance_of? Ore::Type_Expr
+					push_scope receiver
+					result = interpret expr.right
+					pop_scope
+					return result
+				end
+
 				unless expr.right.instance_of? Ore::Identifier_Expr
 					raise Ore::Invalid_Dot_Infix_Right_Operand.new(expr.right, self)
 				end
@@ -994,7 +1003,7 @@ module Ore
 					return interp_func_body overload_func, call
 				end
 
-				if expr.left.value == Ore::DIRECTIVE_OPERATOR
+				if expr.left.value == Ore::BUILTIN_OPERATOR # todo: Choose a different name for this, and a different character to use. @ is now gonna be exclusively "builtin" operator.
 					case expr.operator.value
 					when '+='
 						right = interpret expr.right
@@ -1154,21 +1163,18 @@ module Ore
 		end
 
 		def interp_type expr
-			type                 = Ore::Type.new expr.name.value
-			type.expressions     = expr.expressions
+			existing = stack.last.has?(expr.name.value) && stack.last[expr.name.value]
+			type     = existing.is_a?(Ore::Type) ? existing : Ore::Type.new(expr.name.value)
+
+			type.expressions     = (type.expressions || []) + expr.expressions
 			type.enclosing_scope = stack.last
 
 			ore_name = "Ore::#{expr.name.value}"
 			defined  = Object.const_defined? ore_name
 			link_instance_to_type type, expr.name.value if defined
 
-			if type.types
-				type.types << type.name
-			else
-				type.types = [type.name]
-			end
-
-			# todo: Make @types a set
+			type.types ||= []
+			type.types << type.name
 			type.types = type.types.uniq
 
 			push_then_pop type do |scope|
@@ -1371,7 +1377,7 @@ module Ore
 				enclosing_type.routes[route_key] = route
 			end
 
-			@routes[route_key] = route
+			@route_function_handlers_by_route_name[route_key] = route
 			stack.last.declare route_key, route
 
 			route
@@ -1480,7 +1486,7 @@ module Ore
 		def interp_composition expr
 			# These are interpreted sequentially, so there are no precedence rules. I think that'll be better in the long term because there's no magic behind their evaluation. You can ensure the correct outcome by using these operators to form the types you need.
 
-			right      = maybe_instance interp_identifier expr.identifier
+			right      = maybe_instance interpret expr.identifier
 			unless right.is_a? Ore::Scope
 				# todo: Proper error
 				raise "Expected a scope to compose with, got #{right.inspect}"
@@ -1732,11 +1738,11 @@ module Ore
 			when 'assert'
 				condition = interpret expr.expression
 				raise "assert failed #{expr.inspect}" unless condition
-			when 'super'
-				# The @super directive evaluates to the result of calling the ruby Ruby method
+			when 'ruby'
+				# The @ruby directive evaluates to the result of calling the ruby Ruby method
 				func_scope = stack.last
 				unless func_scope.is_a? Ore::Func
-					raise Ore::Invalid_Super_Proxy_Directive_Usage.new func_scope, self
+					raise Ore::Invalid_Ruby_Proxy_Directive_Usage.new func_scope, self
 				end
 
 				func_name        = func_scope.name
@@ -1759,7 +1765,7 @@ module Ore
 				end
 
 				unless target.respond_to? proxy_method
-					raise Ore::Missing_Super_Proxy_Declaration.new expr, self
+					raise Ore::Missing_Ruby_Proxy_Declaration.new expr, self
 				end
 
 				result = target.send proxy_method, *func_scope.arguments
@@ -1814,8 +1820,8 @@ module Ore
 				# todo: Allow builtins to be extended by the user. Requirements would be:
 				#   1) Create type in Ore
 				#   2) Create equivalent type in scopes.rb or similar
-				#   3) Make sure functions which use the @super expression in its body are named in to match the Ore::Type "proxy_#{func_name}"
-				# For example, `String { upcase {; @super } }` maps to `Ore::String@super_upcase`
+				#   3) Make sure functions which use the @ruby expression in its body are named in to match the Ore::Type "proxy_#{func_name}"
+				# For example, `String { upcase {; @ruby } }` maps to `Ore::String@ruby_upcase`
 				raise Ore::Invalid_Directive_Usage.new(expr, self)
 			end
 		end

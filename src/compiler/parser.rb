@@ -269,7 +269,8 @@ module Ore
 			until curr? Ore::FUNCTION_DELIMITER
 				param        = Ore::Param_Expr.new
 
-				if curr? Ore::DIRECTIVE_OPERATOR and eat Ore::DIRECTIVE_OPERATOR
+				if curr? Ore::UNPACK_OPERATOR
+					eat Ore::UNPACK_OPERATOR
 					param.unpack = true
 				end
 
@@ -343,7 +344,7 @@ module Ore
 
 			it.expressions = it.expressions.compact
 
-			eat '}' and Ore.assert !curr?('}')
+			eat '}'
 
 			it
 			copy_location it, start
@@ -377,10 +378,23 @@ module Ore
 		end
 
 		def parse_composition_expr
-			start           = curr_lexeme
-			expr            = Ore::Composition_Expr.new
-			expr.operator   = eat(:operator)
-			expr.identifier = parse_identifier_expr
+			start         = curr_lexeme
+			expr          = Ore::Composition_Expr.new
+			expr.operator = eat(:operator)
+			ident         = parse_identifier_expr
+
+			while curr?('.') && peek.is(:Identifier)
+				dot_op         = eat('.')
+				right          = parse_identifier_expr
+				infix          = Ore::Infix_Expr.new
+				infix.left     = ident
+				infix.operator = dot_op
+				infix.right    = right
+				copy_location infix, ident
+				ident = infix
+			end
+
+			expr.identifier = ident
 			expr
 			copy_location expr, start
 		end
@@ -390,7 +404,7 @@ module Ore
 
 			expr = Ore::Identifier_Expr.new
 
-			if curr? DIRECTIVE_OPERATOR and eat DIRECTIVE_OPERATOR
+			if curr? BUILTIN_OPERATOR and eat BUILTIN_OPERATOR
 				expr.directive = true
 			elsif curr? SCOPE_OPERATORS
 				expr.scope_operator = parse_scope_operator
@@ -500,12 +514,12 @@ module Ore
 			start       = curr_lexeme
 			expr        = Ore::Number_Expr.new
 			expr.lexeme = eat(:number)
-			if expr.value.count('.') > 1
+			if expr.lexeme.value.count('.') > 1
 				expr                  = Ore::Array_Index_Expr.new expr
 				expr.indices_in_order = expr.lexeme.value.split '.'
 				expr.indices_in_order = expr.indices_in_order.map &:to_i
 				# It's important not to convert number.value here to anything to preserve the variant number of dots in the string. I think this'll be cool syntax, 2d_array.1.2 would be the equivalent of 2d_array[1][2].
-			elsif expr.value.include? '.'
+			elsif expr.lexeme.value.include? '.'
 				expr.type  = :float
 				expr.value = expr.value.to_f
 			else
@@ -557,7 +571,7 @@ module Ore
 			elsif curr? %w(if while unless until)
 				parse_conditional_expr
 
-			elsif curr?(:identifier, ':', :Identifier) || curr?(ANY_IDENTIFIER) || curr?(Ore::DIRECTIVE_OPERATOR, :identifier) || curr?(SCOPE_OPERATORS, ANY_IDENTIFIER) || curr?(DIRECTIVE_OPERATOR, :identifier)
+			elsif curr?(:identifier, ':', :Identifier) || curr?(ANY_IDENTIFIER) || curr?(SCOPE_OPERATORS, ANY_IDENTIFIER) || curr?(BUILTIN_OPERATOR, :identifier) || curr?(BUILTIN_OPERATOR, :Identifier) || curr?(BUILTIN_OPERATOR, :IDENTIFIER)
 				parse_identifier_expr
 
 			elsif curr?(%w( [ \( { |)) && curr?(:delimiter)
@@ -624,8 +638,8 @@ module Ore
 		def complete_expression expr, precedence = STARTING_PRECEDENCE
 			return expr unless expr && lexemes?
 
-			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'super'
-				# note: I'm intentionally skipping `super` here because a Directive_Expr assumes an expression will follow it. But in the case of @super, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
+			if expr.is_a?(Ore::Identifier_Expr) && expr.directive && expr.value != 'ruby'
+				# note: I'm intentionally skipping `ruby` here because a Directive_Expr assumes an expression will follow it. But in the case of @ruby, I want it to be a standalone expression. Maybe this warrants rewriting how directives work? Or maybe this can just stay as an implementation detail. For now it's fine.
 				directive      = Ore::Directive_Expr.new
 				directive.name = expr
 				copy_location directive, expr

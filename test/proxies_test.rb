@@ -4,8 +4,8 @@ require_relative 'base_test'
 
 class ProxiesTest < Base_Test
 	def test_invalid_proxy_directive_usage
-		assert_raises Ore::Invalid_Super_Proxy_Directive_Usage do
-			Ore.interp '@super'
+		assert_raises Ore::Invalid_Ruby_Proxy_Directive_Usage do
+			Ore.interp '@ruby'
 		end
 	end
 

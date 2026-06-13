@@ -1,0 +1,13 @@
+Table {
+	table_name,
+	infer_table_name_from_class! {; @ruby }
+
+	./database,
+	./all {; @ruby }
+	./find { id; @ruby }
+	./find_by { dict; @ruby }
+	./where { dict; @ruby }
+	./create { dict; @ruby }
+	./update { id, dict; @ruby }
+	./delete { id; @ruby }
+}

@@ -136,6 +136,7 @@ module Ore
 
 	class Identifier_Expr < Expression
 		attr_accessor :kind, :unpack, :scope_operator, :directive, :privacy, :binding
+		# todo: Rename @directive to @builtin
 	end
 
 	class Composition_Expr < Expression

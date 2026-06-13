@@ -1,6 +1,6 @@
 @use 'ore/html.ore'
 @use 'ore/database.ore'
-@use 'ore/record.ore'
+@use 'ore/Table.ore'
 @use 'ore/server.ore'
 
 ```Page components```
@@ -88,7 +88,7 @@ db = Sqlite('./temp/task_app.db') # Sqlite composes with Database
 # db = @connect Sqlite(...) is also valid
 @connect db  # => calls Database#create_connection!
 
-Task | Record {
+Task | Table {
 	./database = ../db # Must set the database in order for Task query methods to work
 	table_name = 'tasks'
 }
@@ -101,7 +101,7 @@ else
 end
 
 Task.create({text: "Make Databases work"})
-Task.create({text: "Allow reading and writing Records"})
+Task.create({text: "Allow reading and writing Tables"})
 Task.create({text: "Show Tasks in this app"})
 Task.create({text: "Implement user authentication"})
 Task.create({text: "Add dark mode toggle"})

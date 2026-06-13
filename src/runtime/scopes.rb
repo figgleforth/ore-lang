@@ -99,7 +99,7 @@ module Ore
 
 	class String < Instance
 		require 'digest/md5'
-		extend Super_Proxies
+		extend Ruby_Proxies
 
 		attr_accessor :value
 
@@ -149,7 +149,7 @@ module Ore
 
 	# note: Be sure to prefix with Ore:: whenever referencing this Array type to prevent ambiguity with Ruby's ::Array!
 	class Array < Instance
-		extend Super_Proxies
+		extend Ruby_Proxies
 		attr_accessor :values
 
 		def initialize values = []
@@ -204,7 +204,7 @@ module Ore
 	end
 
 	class Dictionary < Instance
-		extend Super_Proxies
+		extend Ruby_Proxies
 		attr_accessor :dict
 
 		def initialize dict = nil
@@ -256,7 +256,7 @@ module Ore
 	end
 
 	class Number < Instance
-		extend Super_Proxies
+		extend Ruby_Proxies
 		attr_accessor :numerator, :denominator, :type
 
 		def + other
@@ -383,8 +383,8 @@ module Ore
 		attr_accessor :webrick_response
 	end
 
-	class Record < Instance
-		extend Super_Proxies
+	class Table < Instance
+		extend Ruby_Proxies
 
 		def proxy_infer_table_name_from_class!
 			require 'sequel/extensions/inflector.rb'
@@ -404,7 +404,7 @@ module Ore
 
 		# @return [Sequal::SQLite::Dataset]
 		def table
-			raise Ore::Database_Not_Set_For_Record_Instance unless database
+			raise Ore::Database_Not_Set_For_Table_Instance unless database
 
 			database['connection'][table_name]
 		end
