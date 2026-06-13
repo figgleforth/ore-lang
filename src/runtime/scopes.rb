@@ -383,7 +383,7 @@ module Ore
 		attr_accessor :webrick_response
 	end
 
-	class Record < Instance
+	class Table < Instance
 		extend Ruby_Proxies
 
 		def proxy_infer_table_name_from_class!
@@ -404,7 +404,7 @@ module Ore
 
 		# @return [Sequal::SQLite::Dataset]
 		def table
-			raise Ore::Database_Not_Set_For_Record_Instance unless database
+			raise Ore::Database_Not_Set_For_Table_Instance unless database
 
 			database['connection'][table_name]
 		end

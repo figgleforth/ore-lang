@@ -1,0 +1,51 @@
+@use 'ore/database.ore'
+
+Position {
+	C = 0
+	LW = 1
+	RW = 2
+	LD = 3
+	RD = 4
+	G = 5
+	ANY = 6
+
+}
+
+Player | Table {
+	id,
+
+	# Identity
+	prefix,
+	first_name,
+	middle_name,
+	last_name,
+	suffix,
+	age,
+	language,
+	planet,
+	species,
+	university,
+
+	# Physical
+	height_in_cm = 150
+	weight_in_kg = 75
+	hand = 0
+
+	# Position
+	natural_position = Position.ANY
+	current_position,
+
+	# Game attributes
+	max_mods,
+	qualities = {}
+	chemistries = {}
+	connections = []
+	average_chemistry,
+	strategy_id,
+
+	# Associations
+	team_id,
+	user_id,
+}
+
+'height: `Position.ANY == Position.C`'

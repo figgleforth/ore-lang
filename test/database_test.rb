@@ -8,7 +8,7 @@ require 'securerandom'
 
 class Database_Test < Base_Test
 	DATABASE = "@use 'ore/database.ore'"
-	RECORD   = "@use 'ore/record.ore'"
+	RECORD   = "@use 'ore/table.ore'"
 
 	def before_setup
 		@filepath = "./temp#{SecureRandom.hex}.db"
@@ -64,10 +64,10 @@ class Database_Test < Base_Test
 	def test_inferring_record_table_name
 		out = Ore.interp <<~ORE
 		    #{RECORD}
-			r = Record()
+			r = Table()
 			r.table_name
 
-			Thing | Record {}
+			Thing | Table {}
 			t = Thing()
 			t.infer_table_name_from_class!()
 			(r, t)
@@ -115,7 +115,7 @@ class Database_Test < Base_Test
 
 			db.create_table('users' { id: 'primary_key', name: 'String' })
 
-			User | Record {
+			User | Table {
 				./database = db
 				table_name = 'users'
 			}
@@ -162,7 +162,7 @@ class Database_Test < Base_Test
 
 			db.create_table('users', { id: 'primary_key', name: 'String' })
 
-			User | Record {
+			User | Table {
 				./database = db
 				table_name = 'users'
 			}
@@ -181,7 +181,7 @@ class Database_Test < Base_Test
 
 			db.create_table('users', { id: 'primary_key', name: 'String' })
 
-			User | Record {
+			User | Table {
 				./database = db
 				table_name = 'users'
 			}
@@ -200,7 +200,7 @@ class Database_Test < Base_Test
 
 			db.create_table('users', { id: 'primary_key', name: 'String' })
 
-			User | Record {
+			User | Table {
 				./database = db
 				table_name = 'users'
 			}
@@ -217,7 +217,7 @@ class Database_Test < Base_Test
 
 			db.create_table('items', { id: 'primary_key', name: 'String', kind: 'String' })
 
-			Item | Record {
+			Item | Table {
 				./database = db
 				table_name = 'items'
 			}

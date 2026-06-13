@@ -1,4 +1,4 @@
-# Builtin types I'm experimenting with, very much incomplete. Each of these should have an equivalent Ore::Type in src/runtime/scopes.rb
+# Builtin types I'm experimenting with, very much incomplete. Each of these should have an equivalent Ore::Type in ./src/runtime/scopes.rb
 
 @use 'ore/file_system.ore'
 @use 'ore/number.ore'

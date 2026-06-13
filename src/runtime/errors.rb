@@ -120,7 +120,7 @@ module Ore
 	class Url_Not_Set_For_Database_Instance < Error
 	end
 
-	class Database_Not_Set_For_Record_Instance < Error
+	class Database_Not_Set_For_Table_Instance < Error
 	end
 
 	class Type_Checking_Failed < Error

@@ -1,5 +1,5 @@
 module Ore
-	DIRECTIVE_OPERATOR          = '@'
+	BUILTIN_OPERATOR            = '@'
 	UNPACK_OPERATOR             = '@' # todo: Pick a different symbol
 	NIL_INIT_POSTFIX            = ','
 	FUNCTION_DELIMITER          = ';'

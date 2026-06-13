@@ -841,6 +841,13 @@ module Ore
 			else
 				# @copypaste from #interp_dot_scope because we already interpreted expr as 'left'. If #interp_dot_scope interprets expr again, we end up with duplicate duplicate isntnatiations
 
+				if expr.right.instance_of? Ore::Type_Expr
+					push_scope receiver
+					result = interpret expr.right
+					pop_scope
+					return result
+				end
+
 				unless expr.right.instance_of? Ore::Identifier_Expr
 					raise Ore::Invalid_Dot_Infix_Right_Operand.new(expr.right, self)
 				end
@@ -996,7 +1003,7 @@ module Ore
 					return interp_func_body overload_func, call
 				end
 
-				if expr.left.value == Ore::DIRECTIVE_OPERATOR
+				if expr.left.value == Ore::BUILTIN_OPERATOR # todo: Choose a different name for this, and a different character to use. @ is now gonna be exclusively "builtin" operator.
 					case expr.operator.value
 					when '+='
 						right = interpret expr.right
@@ -1156,21 +1163,18 @@ module Ore
 		end
 
 		def interp_type expr
-			type                 = Ore::Type.new expr.name.value
-			type.expressions     = expr.expressions
+			existing = stack.last.has?(expr.name.value) && stack.last[expr.name.value]
+			type     = existing.is_a?(Ore::Type) ? existing : Ore::Type.new(expr.name.value)
+
+			type.expressions     = (type.expressions || []) + expr.expressions
 			type.enclosing_scope = stack.last
 
 			ore_name = "Ore::#{expr.name.value}"
 			defined  = Object.const_defined? ore_name
 			link_instance_to_type type, expr.name.value if defined
 
-			if type.types
-				type.types << type.name
-			else
-				type.types = [type.name]
-			end
-
-			# todo: Make @types a set
+			type.types ||= []
+			type.types << type.name
 			type.types = type.types.uniq
 
 			push_then_pop type do |scope|
@@ -1482,7 +1486,7 @@ module Ore
 		def interp_composition expr
 			# These are interpreted sequentially, so there are no precedence rules. I think that'll be better in the long term because there's no magic behind their evaluation. You can ensure the correct outcome by using these operators to form the types you need.
 
-			right      = maybe_instance interp_identifier expr.identifier
+			right      = maybe_instance interpret expr.identifier
 			unless right.is_a? Ore::Scope
 				# todo: Proper error
 				raise "Expected a scope to compose with, got #{right.inspect}"

@@ -1,4 +1,4 @@
-Record {
+Table {
 	table_name,
 	infer_table_name_from_class! {; @ruby }
 
