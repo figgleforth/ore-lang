@@ -53,10 +53,10 @@ module Ore
 				keep_running = true
 
 				trap_fn = Proc.new do
-					puts @last_output
 					puts Ore::Ascii.dim "Shutting down..."
 					keep_running = false
-					Thread.main.raise Interrupt
+					puts "\n\s\s(V) (;,,;) (V)"
+					Thread.main.exit
 				end
 				Signal.trap 'INT', trap_fn
 				Signal.trap 'TERM', trap_fn
