@@ -154,7 +154,7 @@ module Ore
 
 		def initialize values = []
 			super 'Array'
-			@values                 = values
+			@values                 = values || []
 			@declarations['values'] = self
 		end
 
@@ -164,6 +164,7 @@ module Ore
 		proxy :shift
 		proxy :unshift
 		proxy :length
+		proxy :length, as: :count
 		proxy :first
 		proxy :last
 		proxy :slice
@@ -421,19 +422,6 @@ module Ore
 			record ? Ore::Dictionary.new(record) : nil
 		end
 
-		def proxy_create ore_dict
-			# todo: Return self, or a hash of the inserted row. By default, table#insert returns the id of the inserted row
-			table.insert ore_dict.dict
-		end
-
-		def proxy_delete id
-			table.where(id: id).delete
-		end
-
-		def proxy_update id, ore_dict
-			table.where(id: id).update ore_dict.dict
-		end
-
 		def proxy_find_by ore_dict
 			record = table.where(ore_dict.dict).first
 			record ? Ore::Dictionary.new(record) : nil
@@ -444,13 +432,29 @@ module Ore
 			dictionaries = records.map { |hash| Ore::Dictionary.new hash }
 			Ore::Array.new dictionaries
 		end
+
+		def proxy_create ore_dict
+			# todo: Return self, or a hash of the inserted row. By default, table#insert returns the id of the inserted row
+			table.insert ore_dict.dict
+		end
+
+		def proxy_update id, ore_dict
+			table.where(id: id).update ore_dict.dict
+		end
+
+		def proxy_delete id
+			table.where(id: id).delete
+		end
+
 	end
 
 	class Database < Instance
 		require 'sequel'
 
 		# @return [Sequel::SQLite::Database]
-		attr_accessor :connection
+		def connection
+			@connection ||= create_connection!
+		end
 
 		# Calls Sequel.sqlite with the `url` declaration on this database, and returns the resulting database instance. Caches the database in @database.
 		def create_connection!
