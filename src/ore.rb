@@ -16,6 +16,16 @@ require_relative 'compiler/type_checker'
 # Runtime (AST to execution)
 require_relative 'runtime/errors'
 require_relative 'runtime/scopes'
+
+# External Ruby-backed built-ins (they depend on core scopes above)
+require_relative 'external/ruby/string'
+require_relative 'external/ruby/array'
+require_relative 'external/ruby/dictionary'
+require_relative 'external/ruby/number'
+require_relative 'external/ruby/file_system'
+require_relative 'external/ruby/database'
+require_relative 'external/ruby/table'
+
 require_relative 'runtime/return'
 require_relative 'runtime/interpreter'
 require_relative 'runtime/repl'
