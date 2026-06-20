@@ -1,12 +1,12 @@
 module Ore
 	class Scope
-		attr_accessor :enclosing_scope, :sibling_scopes, :declarations, :name, :type_contracts
+		attr_accessor :enclosing_scope, :sibling_scopes, :declarations, :name, :type_by_identifier
 
 		def initialize name = nil
-			@name           = name
-			@declarations   = {}
-			@sibling_scopes = []
-			@type_contracts = {}
+			@name               = name
+			@declarations       = {}
+			@sibling_scopes     = []
+			@type_by_identifier = {}
 		end
 
 		def declare identifier, value

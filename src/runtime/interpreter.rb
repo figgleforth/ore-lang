@@ -43,6 +43,9 @@ module Ore
 		end
 
 		def output
+			checker = Type_Checker.new input
+			raise checker.output if checker.output
+
 			input.each.inject(nil) do |_, expr|
 				interpret expr
 			end
@@ -780,6 +783,7 @@ module Ore
 				right_value = interpret expr.right
 			end
 
+			# Before the actual assignment, the identifier is checked for specific behavior errors based on its expression type (class, constant, variable/function)
 			case Ore.type_of_identifier expr.left.value
 			when :IDENTIFIER
 				# It can only be assigned once, so if the declaration exists, fail.
@@ -793,16 +797,17 @@ module Ore
 				end
 			when :identifier
 				if assignment_scope
-					# If we find a type contract for the left side of the expression, then it will be enforced here.
-					contract = assignment_scope.type_contracts[expr.left.value]
-					if contract && type_name_to_string(right_value) != contract
-						raise Ore::Type_Contract_Violation.new(expr, contract, type_name_to_string(right_value), self)
+					# If the left side of the expression was declared with a type annotation, the type of `right_value` is enforced here.
+					type = assignment_scope.type_by_identifier[expr.left.value]
+					name = type_name_to_string(right_value)
+					if type && name != type
+						raise Ore::Type_Contract_Violation.new(expr, type, name, self)
 					end
 				end
 			end
 
 			if expr.left.is_a?(Ore::Identifier_Expr) && expr.left.type
-				assignment_scope.type_contracts[expr.left.value] = expr.left.type.value
+				assignment_scope.type_by_identifier[expr.left.value] = expr.left.type.value
 			end
 
 			assignment_scope.declare expr.left.value, right_value
@@ -816,7 +821,7 @@ module Ore
 			right_value      = interpret expr.right
 			assignment_scope = scope_for_identifier(expr.left) || stack.last
 			assignment_scope.declare expr.left.value, right_value
-			assignment_scope.type_contracts[expr.left.value] = type_name_to_string right_value
+			assignment_scope.type_by_identifier[expr.left.value] = type_name_to_string right_value
 			track_static_declaration assignment_scope, expr.left
 			right_value
 		end
