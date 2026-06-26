@@ -3,536 +3,656 @@
 [![justforfunnoreally.dev badge](https://img.shields.io/badge/justforfunnoreally-dev-2B7FFF)](https://justforfunnoreally.dev)
 ![Status of project Ruby tests](https://github.com/figgleforth/ore-lang/actions/workflows/tests.yml/badge.svg)
 
-### Quick Start
+Learn about the language below, or *[click here to get started using it](getting_started.md)*.
 
-> Requires Ruby `3.4.1` or higher, and Bundler
+---
 
-```bash
-git clone https://github.com/figgleforth/ore-lang.git
-cd ore-lang
-bundle install
-bundle exec bin/ore examples/hello.ore # => Hello, Ore!
-```
+## Variables
 
-Example code from [examples/hello.ore](./examples/hello.ore):
+1. Must start with a lowercase letter or `_`
+2. Can be followed by comma as shorthand for `= nil`
 
 ```ore
-Greet {
-	subject,
-
-	new { subject;
-		.subject = subject
-	}
-
-	greeting {;
-		"Hello, `subject`!"
-	}
-}
-
-Greet('Ore').greeting()
+nothing = nil
+something = 123
+empty,  # equivalent to `empty = nil`
 ```
 
-### Table of Contents
+## Functions
 
-- [Features](#features)
-- [Code Examples](#code-examples)
-    - [Manual Type Contracts](#manual-type-contracts)
-    - [Runtime Type Contracts](#runtime-type-contracts)
-    - [Variables](#variables)
-    - [Functions](#functions)
-    - [Classes](#classes)
-    - [Loops](#loops)
-    - [Instance Unpacking](#instance-unpacking)
-    - [File Loading](#file-loading)
-    - [Database & ORM](#database--orm)
-    - [Web Servers](#web-servers)
-    - [HTML Rendering](#html-rendering)
-    - [Operator Overloading](#operator-overloading) 
-- [Project Structure](#project-structure)
-
-### Features
-
-- Gradual typing — opt in as needed
-	- Static type checking at parse time for literal mismatches (`x: String = 99`)
-	- Call site argument types checked against typed function signatures (`add(123, 'boo')`, `add { a: Number, b: NUmber }`)
-	- Runtime type contracts via `:=` where type is inferred and enforced on future assignments (`x := 123`)
-	- Plain `=` behaves dynamic without reassignment restrictions
-- Naming conventions replace keywords
-	- `Capitalize` classes
-	- `lowercase` variables and functions
-	- `UPPERCASE` constants
-- Class composition replaces inheritance
-	- `|` Union - merge classes (left side wins conflicts)
-	- `&` Intersection - keep only shared declarations
-	- `~` Difference - discard right side declarations
-	- `^` Symmetric Difference - discard shared declarations
-- Scope operators for explicit access
-	- `.identifier` accesses instance scope only, like `self.identifier`
-	- `./identifier` accesses type/static scope, like `self.class.identifier`
-	- `../identifier` accesses global scope
-- First-class functions and classes
-- Data containers `Array`, `Tuple`, `Dictionary`
-- Loops like `for`, `while`, and `until`
-	- Automatic `it` declaration for iteration value
-	- Automatic `at` declaration for iteration index
-	- `skip` and `stop` keywords for loop control
-	- Stride support with `for x by 2` syntax
-- Unpacking an instance's declarations with `@` operator
-	- Makes declarations accessible without `instance.` prefix
-	- Auto-unpack function parameters in function body `funk { @with; }`
-	- Manually unpack `@ += instance` and undo `@ -= instance`
-- Basic web server with routing
-	- Route definitions use `method://path` syntax (e.g., `get://`, `post://users/:id`)
-	- URL parameters via `:param` syntax
-	- Query string and form data access via `request.query` and `request.body`
-	- HTTP redirects with `response.redirect(url)`
-	- Non-blocking `@start` directive allows running multiple servers
-	- Graceful shutdown handling when program exits
-- Database ORM with SQLite
-	- Base composable `Record` type with `all()`, `find()`, `create()`, `delete()` methods
-	- Database operations via `Database` type
-	- Schema definition with dictionaries
-	- Static database linking with `./database = ../db`
-- HTML rendering with `Dom` composition
-	- Compose HTML with built-in HTML DOM elements (`Dom`, `Html`, `Body`, `Div`, `H1`, etc)
-	- Declare `html_` prefixed attributes for HTML attributes (`html_href`, `html_class`)
-	- Declare `css_` prefixed properties for CSS (`css_color`, `css_background`)
-	- Routes returning `Dom` instances automatically render to HTML
-	- Standard library provides common HTML elements
-- Operator overloading for `infix`, `prefix`, and `postfix` fixities
-	- Declare with `@operator <op> @<fixity> <precedence> { params; body }`
-	- Operators are regular functions stored in scope — overloads don't leak outside their declaring scope
-	- Any symbol sequence or identifier can be an operator (`->`, `!!`, `pm`, `$`)
-
-### Code Examples
-
-#### Manual Type Contracts
-
-Manual Type Contracts are created by using `: Type` syntax on variables and function parameters.
+1. Must start with a lowercase letter or `_`
+2. The function body is surrounded with `{}` braces
+3. The arguments are declared before the arguments/body delimiter `;`
+4. The body comes after the arguments/body delimiter `;`
+5. The last expression is the return value
+6. Return early using `return` keyword
 
 ```ore
-# Variable annotations
-x: String = 'hello'   # ok
-y: Number = 42        # ok
-z: String = 99        # Type_Checking_Failed — String expected, Number given
+# func_name { [args]; [body] }
 
-# Parameter annotations
-add { a: Number, b: Number;
-	a + b
+func_with_args { arg1, arg2 = 1, etc = true;
+    # body
 }
 
-add(1, 2)      # ok
-add(1, 'two')  # Type_Checking_Failed — Number expected for b, String given
+without_args {;
+    # body
+}
+
+add { a, b;
+    a + b
+}
+add(4, 8)  #=> 12
 ```
 
-Annotations on variables whose values aren't known statically (e.g. the result of a function call or another identifier) are not checked at parse time — only literal mismatches are caught.
+## Classes
 
-#### Runtime Type Contracts
-
-`:=` infers a type from the right hand side and locks the variable to that type for future `=` assignments. Plain `=` without a prior `:=` or annotation stays fully dynamic.
+1. Must start with an uppercase character
+2. Can have an initializer `new`
 
 ```ore
-x := 4        # x is now a Number
-x = 8         # ok — same type
-x = 'hello'   # Type_Contract_Violation — Number expected, got String
-
-x := 'hello'  # re-initialize — x is now a String
-x = 'world'   # ok
-
-y = 4
-y = 'hello'   # ok — no contract, fully dynamic
-```
-
-#### Variables
-
-```
-# Comments start with a hash
-
-nothing,            # Syntactic sugar for "nothing = nil"
-something = true
-okay_too = 42,      # Comma allowed as expression separator
-
-# Strings can be single or double quoted, and interpolated with backticks
-LANG_NAME = "ore-lang"
-version   = '0.0.0'
-lines     = 4_815
-header    = "`LANG_NAME` v`version`"   # "ore-lang v0.0.0"
-footer    = 'Lines of code: `lines`'   # "Lines of code: 4815"
-
-# Ranges
-inclusive_range   = 0..2
-exclusive_range   = 2><5
-l_exclusive_range = 5>.7
-r_exclusive_range = 7.<9
-
-# Data containers
-tuples = (header, footer)
-arrays = [inclusive_range, exclusive_range]
-
-# Dictionaries can be initialized in multiple ways, commas and values are optional
-dict = {}                       # {}
-dict = {x y}                    # {x: nil, y: nil}
-dict = {u, v}                   # {u: nil, v: nil}
-dict = { a:0 b=1 c}             # {a: 0, b: 1, c: nil}
-dict = { x:4, y=8, z}           # {x: 4, y: 8, z: nil}
-dict = { v=version, l=lines }   # {v: "0.0.0", l: 4815}
-```
-
-#### Functions
-
-```
-# Syntax: <function_name> { <params, etc>; <body> }, where ";" is the delimiter between params and body.
-
-noop_function {;}
-
-best_show {;
-	"Lost"  # Last expression is return value
+My_Class {
+    input,
+    
+    new { input;
+        .input = input  # .input is equivalent to this.input or self.input
+        @puts 'Initted with "`input`"'
+    }
 }
 
-fizz_buzz { n;
-	if n % 3 == 0 and n % 5 == 0
-		'FizzBuzz'
-	elif n % 3 == 0
-		'Fizz'
-	elif n % 5 == 0
-		'Buzz'
-	else
-		'`n`'
-	end           # Control flows close with `end`
-}                 # Code blocks close with `}`
+instance = My_Class('some input')  #=> Initted with "some input"
 ```
 
-#### Classes
+## Constants
 
-```
-# Syntax: <class_name> { <body> }
-
-Repo {
-	user,
-	name,
-
-	# "new" is reserved for constructors
-	new { user, name;
-		.user = user
-		.name = name
-	}
-
-	to_s {;
-		"`user`/`name`"
-	}
-}
-
-Repo('figgleforth', 'ore-lang').to_s() # "figgleforth/ore-lang"
-```
-
-#### Loops
+1. Must be UPPERCASE
+2. Cannot be reassigned after initial declaration
 
 ```ore
-# For loops iterate over arrays, ranges, and other iterables
-result = []
-for [1, 2, 3, 4, 5]
-	result << it  # it is the current iteration value
-end
-# result = [1, 2, 3, 4, 5]
-
-# Map, select, reject, etc...
-for [1, 2, 3] map
-	it * 2
-end
-
-# Stride support with "by" keyword
-for [1, 2, 3, 4] select by 2
-	it # [1, 2] or [2, 4]
-end
-
-for [1, 2, 3, 4] reject by 2,1 # the overlap amount
-	it # [1, 2] or [2, 3] or [3,4]
-end
-
-for [1, 2, 3, 4, 5, 6, 7] each by 3,1
-	it # [1,2,3] or [3,4,5] or [5,6,7] ...
-end
-
-for [1, 2, 3, 4, 5, 6, 7, 8] each by 4,2
-	it # [1,2,3,4] or [3,4,5,6] or [5,6,7,8] ...
-end
-
-# Ranges work too
-sum = 0
-for 1..10
-	sum += it
-end
-# sum = 55
-
-# Access iteration index with `at`
-indexed = []
-for ['a', 'b', 'c']
-	indexed << "`at`: `it`"
-end
-# indexed = ["0: a", "1: b", "2: c"]
-
-# Loop control with skip and stop
-evens = []
-for 1..10
-	if it % 2 != 0
-		skip  # Continue to next iteration
-	end
-	evens << it
-	if it == 6
-		stop  # Break out of loop
-	end
-end
-# evens = [2, 4, 6]
+PI = 3.14159
+MAX_SIZE = 100
+APP_NAME = 'My App'
 ```
 
-#### Instance Unpacking
+## Comments
+
+1. Single-line comments use `#`
+2. Multiline comments use triple backticks
+
+````ore
+# This is a single-line comment
+
+```
+This is a
+multiline comment
+```
+````
+
+## String Interpolation
+
+1. Use backticks inside strings to interpolate expressions
+2. Escape with backslash to prevent interpolation
+
+```ore
+name = 'World'
+greeting = "Hello, `name`!"  #=> "Hello, World!"
+math = "2 + 2 = `2 + 2`"    #=> "2 + 2 = 4"
+escaped = "Literal \`backticks\`"
+```
+
+## Scope Operators
+
+1. `.` accesses current instance scope only
+2. `./` accesses current type/class scope only
+3. `../` accesses global scope
+
+```ore
+My_Class {
+    ./count = 0      # Type-level (static) variable
+    value,
+
+    new { value;
+        .value = value   # Instance variable (like this.value)
+        ./count += 1     # Access static from instance
+    }
+
+    get_global {;
+        ../PI  # Access global scope constants
+    }
+}
+```
+
+## Static Declarations
+
+1. Use `./` to declare type-level (static) members
+2. Shared across all instances
+3. Accessed on the type itself: `Type.member`
+
+```ore
+Counter {
+    ./count = 0
+
+    ./increment {;
+        count += 1
+    }
+
+    new {;
+        ./count += 1
+    }
+}
+
+Counter()
+Counter()
+Counter.count  #=> 2
+```
+
+## Type Composition
+
+1. `|` union: merge all members from both types
+2. `&` intersection: keep only shared members
+3. `~` removal: remove members of right type from left
+4. `^` symmetric difference: keep non-shared members
+
+```ore
+Movable {
+    x = 0
+    y = 0
+    move { dx, dy;
+        x += dx
+        y += dy
+    }
+}
+
+Drawable {
+    color = 'black'
+    draw {; "Drawing in `color`" }
+}
+
+# Combine types
+Sprite | Movable | Drawable {
+    name = 'sprite'
+}
+
+s = Sprite()
+s.move(10, 5)
+s.draw()
+```
+
+## Conditionals
+
+1. `if`/`elif`/`else`/`end`
+2. `unless` is the negation of `if`
+3. Can be used as inline modifiers
+
+```ore
+if x > 10
+    'big'
+elif x > 5
+    'medium'
+else
+    'small'
+end
+
+unless logged_in
+    redirect('/login')
+end
+
+# Inline conditionals
+@puts 'yes' if condition
+@puts 'no' unless condition
+```
+
+## While & Until Loops
+
+1. `while` loops while condition is true
+2. `until` loops until condition becomes true
+3. `elwhile` chains another loop when prior condition becomes false
+
+```ore
+i = 0
+while i < 5
+    @puts i
+    i += 1
+end
+
+j = 0
+until j == 5
+    @puts j
+    j += 1
+end
+
+# Chained loops with elwhile
+x = 0
+y = 0
+while x < 4
+    x += 1
+elwhile y > -8
+    y -= 1
+else
+    @puts 'done'
+end
+```
+
+## For Loops
+
+1. Iterate over arrays, ranges, or any iterable
+2. `it` is the current element
+3. `at` is the current index
+
+```ore
+for [1, 2, 3]
+    @puts it      # Current element
+    @puts at      # Current index
+end
+
+for 1..5
+    @puts it      # 1, 2, 3, 4, 5
+end
+
+# With stride (chunks)
+for [1, 2, 3, 4, 5, 6] by 2
+    @puts it      # [1,2], [3,4], [5,6]
+end
+```
+
+## For Loop Verbs
+
+1. `map` transforms each element
+2. `select` filters where body is truthy
+3. `reject` filters where body is falsy
+4. `count` counts where body is truthy
+
+```ore
+doubled = for [1, 2, 3] map
+    it * 2
+end  #=> [2, 4, 6]
+
+evens = for [1, 2, 3, 4, 5] select
+    it % 2 == 0
+end  #=> [2, 4]
+
+odds = for [1, 2, 3, 4, 5] reject
+    it % 2 == 0
+end  #=> [1, 3, 5]
+
+even_count = for [1, 2, 3, 4, 5, 6] count
+    it % 2 == 0
+end  #=> 3
+```
+
+## Loop Control
+
+1. `skip` continues to next iteration
+2. `stop` breaks out of loop
+3. `return` exits the function (propagates through loops)
+
+```ore
+for items
+    skip if it.invalid    # Continue to next
+    stop if it.last       # Break out
+end
+
+find_first { predicate;
+    for items
+        return it if predicate(it)
+    end
+    nil
+}
+```
+
+## Sibling Scopes
+
+Sibling scopes are checked before the current scope during identifier lookup, making an instance's members accessible without an `instance.` prefix.
+
+1. `@param` in a function signature adds the argument to a sibling scope, making its members directly accessible in the function body
+2. `@ += instance` and `@ -= instance` manually add and remove instances from sibling scopes in any scope
 
 ```ore
 Vector {
-	x,
-	y,
-
-	new { x, y;
-		.x = x
-		.y = y
-	}
+    x = 0
+    y = 0
 }
 
-# Auto-unpack in function parameters with @
-add { @vec;
-	x + y  # Access vec.x and vec.y directly without vec. prefix
+# Auto-unpack in parameters
+magnitude { @vec;
+    (x ** 2 + y ** 2).sqrt()  # Access x, y directly
 }
 
-v = Vector(3, 4)
-add(v)  # 7
+v = Vector()
+v.x = 3
+v.y = 4
+magnitude(v)  #=> 5
 
 # Manual sibling scope control
-multiply { factor;
-	v1 = Vector(5, 10)
-	@ += v1  # Add v1's members to sibling scope
-
-	result_x = x * factor  # Access x directly
-	result_y = y * factor  # Access y directly
-
-	@ -= v1  # Remove v1 from sibling scope
-
-	Vector(result_x, result_y)
-}
-
-multiply(2)  # Vector(10, 20)
+@ += some_instance   # Add members to scope
+@ -= some_instance   # Remove from scope
 ```
 
-#### File Loading
+## Arrays
+
+1. Created with `[]` brackets
+2. Access elements with subscript or dot notation
 
 ```ore
-# Load external Ore files with @use directive
-@use './some_formatter.ore'
-@use './some_dir/users.ore'
+arr = [1, 2, 3, 4, 5]
+arr[0]              #=> 1
+arr.0               #=> 1 (dot notation)
 
-# Use loaded classes and functions
-user = User('Alice', 'alice@example.com')
-formatted = format_name(user.name)
+arr.push(6)         # Add to end
+arr.pop()           # Remove from end
+arr.length()        #=> 5
+arr.first(2)        #=> [1, 2]
+arr.last(2)         #=> [4, 5]
+arr.reverse()
+arr.include?(3)     #=> true
+arr.empty?()        #=> false
+
+arr.map({ x; x * 2 })
+arr.filter({ x; x > 2 })
 ```
 
-#### Database & ORM
+## Dictionaries
+
+1. Created with `{}` braces and key-value pairs
+2. Keys can be symbols, strings, or identifiers
+3. Access with subscript `dict[:key]`
 
 ```ore
-@use 'ore/database.ore'
-@use 'ore/record.ore'
+dict = {x: 10, y: 20}
+dict[:x]            #=> 10
+dict[:z] = 30       # Assignment
 
-# Create and connect to database
-db = Sqlite('./temp/blog.db')
-@connect db
-
-# Create table with schema
-db.create_table('posts', {
-	id: 'primary_key',
-	title: 'String',
-	body: 'String'
-})
-
-# Define model by composing with Record
-Post | Record {
-	./database = ../db     # Link to static ..database declaration
-	table_name = 'posts'
-}
-
-# Create records
-Post.create({title: "Hello Ore", body: "Building web apps is fun!"})
-Post.create({title: "Databases", body: "SQLite integration works!"})
-
-# Query records
-posts = Post.all()         # Fetch all posts
-post = Post.find(1)        # Find by ID
-
-# Access record data (returns Dictionary)
-post[:title]               # "Hello Ore"
-post[:body]                # "Building web apps is fun!"
-
-# Delete records
-Post.delete(2)
+dict.keys()         #=> [:x, :y, :z]
+dict.values()       #=> [10, 20, 30]
+dict.has_key?(:x)   #=> true
+dict.count()        #=> 3
+dict.empty?()       #=> false
+dict.delete(:z)
+dict.merge({a: 1})
+dict.fetch(:missing, 'default')
 ```
 
-> For a complete full-stack example, see [todo_app.ore](examples/todo_app.ore) which combines Database, ORM, Server, HTML rendering, and forms into a working CRUD application.
+## Strings
 
-#### Web Servers
+```ore
+s = 'Hello, World!'
+s.length            #=> 13
+s.upcase()          #=> 'HELLO, WORLD!'
+s.downcase()        #=> 'hello, world!'
+s.split(', ')       #=> ['Hello', 'World!']
+s.trim()            # Remove whitespace
+s.chars()           #=> ['H', 'e', 'l', ...]
+s.reverse()
+s.include?('World') #=> true
+s.start_with?('He') #=> true
+s.end_with?('!')    #=> true
+s.gsub('World', 'Ore')
+s.to_i()            # Convert to integer
+s.empty?()          #=> false
+```
+
+## Numbers
+
+```ore
+n = 42
+n.abs()             # Absolute value
+n.floor()           # Round down
+n.ceil()            # Round up
+n.round()           # Round to nearest
+n.sqrt()            # Square root
+n.even?()           #=> true
+n.odd?()            #=> false
+n.to_s()            #=> '42'
+n.clamp(0, 100)     # Clamp to range
+```
+
+## Ranges
+
+1. `..` inclusive range
+2. `.<` exclusive end
+3. `>.` exclusive start
+4. `><` exclusive both
+
+```ore
+1..5        #=> 1, 2, 3, 4, 5  (inclusive)
+1.< 5       #=> 1, 2, 3, 4     (exclusive end)
+>. 1 5      #=> 2, 3, 4, 5     (exclusive start)
+>< 1 5      #=> 2, 3, 4        (exclusive both)
+
+for 1..10
+    @puts it
+end
+```
+
+## File I/O
+
+```ore
+@use 'ore/file_system.ore'
+
+content = File_System.read('./file.txt')
+File_System.write_string_to_file('./out.txt', 'Hello!')
+```
+
+## @use Directive
+
+1. Imports another Ore file
+2. Files are only loaded once
+
+```ore
+@use 'ore/string.ore'
+@use 'ore/array.ore'
+@use './my_module.ore'
+```
+
+## @puts Directive
+
+```ore
+@puts 'Hello, World!'
+@puts variable
+@puts "Value: `expression`"
+```
+
+## Web Server
+
+1. Compose with `Server` type
+2. Define routes with HTTP method syntax
+3. Start with `@start` directive
 
 ```ore
 @use 'ore/server.ore'
 
-# Create servers by composing with built-in Server type
-Web_App | Server {
-	# Define routes using HTTP method and path
-	get:// {;
-		"<h1>Welcome to Ore!</h1>"
-	}
+App | Server {
+    new {;
+        .port = 3000
+    }
 
-	get://hello/:name { name;
-		"<h1>Hello, `name`!</h1>"
-	}
+    get:// {;
+        'Hello, World!'
+    }
 
-	post://submit {;
-		"Form submitted"
-	}
+    get://about {;
+        'About page'
+    }
 }
 
-API_Server | Server {
-	get://api/users {;
-		"[{\"id\": 1, \"name\": \"Alice\"}]"
-	}
-}
-
-# Both servers run concurrently in background threads
-app = Web_App(8080)
-api = API_Server(3000)
-@start app
-@start api
+@start App()
 ```
 
-#### HTML Rendering
+## Routes
 
-Using built-in `Dom` composition:
+1. HTTP methods: `get://`, `post://`, `put://`, `delete://`, `patch://`
+2. URL parameters with `:param` syntax
+3. Query params via `request.query`
+
+```ore
+App | Server {
+    # Static route
+    get://users {;
+        'All users'
+    }
+
+    # URL parameter
+    get://users/:id { id;
+        "User `id`"
+    }
+
+    # Multiple params
+    get://posts/:post_id/comments/:id { post_id, id;
+        "Comment `id` on post `post_id`"
+    }
+
+    # Query strings: /search?q=term
+    get://search {;
+        query = request.query[:q]
+        "Searching for `query`"
+    }
+}
+```
+
+## Request & Response
+
+```ore
+post://login {;
+    username = request.body[:username]
+    password = request.body[:password]
+
+    if authenticate(username, password)
+        response.redirect('/dashboard')
+    else
+        response.status = 401
+        'Unauthorized'
+    end
+}
+
+get://api/data {;
+    response.headers['Content-Type'] = 'application/json'
+    '{"status": "ok"}'
+}
+```
+
+## Database
+
+1. Use `Sqlite` for SQLite databases
+2. Connect with `@connect` directive
+
+```ore
+@use 'ore/database.ore'
+
+db = Sqlite('./data/app.db')
+@connect db
+
+db.create_table('users', {
+    id: 'primary_key',
+    name: 'String',
+    email: 'String'
+})
+
+db.table_exists?('users')  #=> true
+db.tables()                #=> ['users']
+db.delete_table('users')
+```
+
+## Record ORM
+
+1. Compose with `Record` type
+2. Set static `./database` and instance `table_name`
+
+```ore
+@use 'ore/record.ore'
+
+User | Record {
+    ./database = ../db
+    table_name = 'users'
+}
+
+# CRUD operations
+User.create({name: 'Alice', email: 'alice@example.com'})
+users = User.all()        #=> Array of Dictionaries
+user = User.find(1)       #=> Dictionary
+User.delete(1)
+```
+
+## HTML Elements
+
+1. Compose with HTML element types from `ore/html.ore`
+2. `css_*` prefix sets inline CSS properties
+3. `html_*` prefix sets HTML attributes
 
 ```ore
 @use 'ore/html.ore'
 
-Layout | Dom {
-	title,
-	body_content,
+Card | Div {
+    css_padding = '1rem'
+    css_border_radius = '8px'
+    css_background_color = '#fff'
 
-	new { title = 'My page', body_content = 'Hello!';
-		.title = title
-		.body_content = body_content
-	}
-
-	render {;
-		# Use built-in Html, Head, Title, and Body types
-		Html([
-			Head(Title(title)),
-			Body(body_content)
-		])
-	}
+    html_class = 'card'
+    html_data_value = 42
+    html_aria_label,
 }
+
+Link | A {
+    html_href = '#'
+    html_target = '_blank'
+}
+
+page = Html([
+    Head(Title('My Page'))
+    Body([
+        H1('Welcome')
+        Card([
+            P('Hello!')
+            Link('Click me')
+        ])
+    ])
+])
 ```
 
-Using strings with HTML:
+## Operators
+
+### Arithmetic
 
 ```ore
-@use 'ore/html.ore'
-
-Layout | Dom {
-	render {;
-		"<html><head><title>My page</title></head><body>Hello!</body></html>"
-	}
-}
++ - * / %     # Basic math
+**            # Exponentiation
+<< >>         # Bitwise shift / Array append
 ```
 
-Both examples will produce an HTML response as long as the class composes with `Dom`:
-
-```
-<html>
-	<head>
-		<title>My page</title>
-	</head>
-	<body>
-		Hello!
-	</body>
-</html>
-```
-
-Adding HTML and CSS attributes:
+### Comparison
 
 ```ore
-@use 'ore/html.ore'
-
-My_Div | Dom {
-	html_element = 'p'
-	html_class = 'my_class'
-	html_id = 'my_id'
-	css_background_color = 'black'
-	css_color = 'white'
-}
-
-# => <p class='my_class' id='my_id' style='background-color:black;color:white;'></p>
+== !=         # Equality
+=== !==       # Strict equality
+< <= > >=     # Relational
+<=>           # Spaceship (three-way)
+=~ !~         # Regex match
 ```
 
-Note: Rendering HTML only works when `render{;}` is called by a Server instance. See [html.ore](ore/html.ore) for predefined `Dom` elements. See [web1.ore](examples/web1.ore) for Server and HTML usage.
-
-#### Operator Overloading
-
-Operators are declared with `@operator`, a fixity (`@infix`, `@prefix`, `@postfix`), a precedence, and a function body. They are stored as regular functions in the declaring scope and looked up at runtime.
+### Logical
 
 ```ore
-# Infix: pipe operator — passes left as argument to right function
-@operator -> @infix 300 { left, right;
-	right(left)
-}
-
-double { n; n * 2 }
-add_one { n; n + 1 }
-
-5 -> double -> add_one  # => 11
-
-# Prefix: $ constructs a Currency
-Currency { amount, name, code, }
-
-@operator $ @prefix 900 { amount;
-	c = Currency()
-	c.amount = amount
-	c.name = 'US Dollar'
-	c.code = 'USD'
-	c
-}
-
-$42  # => Currency(amount: 42, name: 'US Dollar', code: 'USD')
-
-# Postfix: pm annotates a time value
-Time { hour, minute, period, }
-
-@operator : @infix 700 { hour, minute;
-	t = Time()
-	t.hour = hour
-	t.minute = minute
-	t
-}
-
-@operator pm @postfix 600 { left;
-	left.period = 'pm'
-	left
-}
-
-11:22pm  # => Time(hour: 11, minute: 22, period: 'pm')
+&& and        # Logical AND
+|| or         # Logical OR
+! not         # Logical NOT
 ```
 
-See [operator_overloads.ore](examples/operator_overloads.ore) for more examples.
+### Assignment
 
-### Project Structure
+```ore
+=             # Basic assignment
++= -= *= /=   # Compound assignment
+&&= ||=       # Logical compound
+<<= >>=       # Shift compound
+```
 
-- [`src/readme`](src/readme.md) details the architecture and contains instructions for running your own programs
-- [`examples`](examples) contains code examples written in Ore
-- [`ore`](ore) contains code for the Ore standard library
-- [`src`](src) contains code implementing Ore
-    - [Lexer](src/compiler/lexer.rb) – Source code to Lexemes
-    - [Parser](src/compiler/parser.rb) – Lexemes to Expressions
-    - [Type_Checker](src/compiler/type_checker.rb) – Basic type annotation checking
-    - [Interpreter](src/runtime/interpreter.rb) – Entry point; `run(source)` lexes, parses, and executes
+## Nil Initialization
+
+1. Trailing comma declares variable as nil if undefined
+2. Returns existing value if already defined
+
+```ore
+undefined_var,    #=> nil
+undefined_var     #=> nil
+
+existing = 42
+existing,         #=> 42 (unchanged)
+```

@@ -1,3 +1,4 @@
+# Ruby implementation is in src/external/ruby/string.rb
 # todo: Document all members
 
 String {

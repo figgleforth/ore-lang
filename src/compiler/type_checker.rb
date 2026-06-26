@@ -1,10 +1,10 @@
 module Ore
 	class Type_Checker
-		attr_accessor :input, :types_by_identifier
+		attr_accessor :input, :type_by_identifier
 
 		def initialize input
-			@input               = input
-			@types_by_identifier = {} # { identifier: (Type, function signature) }
+			@input              = input
+			@type_by_identifier = {} # { identifier: (Type, function signature) }
 		end
 
 		def output
@@ -20,7 +20,7 @@ module Ore
 			when Ore::String_Expr then 'String'
 			when Ore::Number_Expr then 'Number'
 			when Ore::Symbol_Expr then 'Symbol'
-			when Ore::Identifier_Expr then types_by_identifier[expr.value]
+			when Ore::Identifier_Expr then type_by_identifier[expr.value]
 			else nil
 			end
 		end
@@ -29,12 +29,12 @@ module Ore
 			return unless expr.name
 			params = expr.expressions.select { _1.is_a? Ore::Param_Expr }
 			return unless params.any?(&:type)
-			types_by_identifier[expr.name.value] = params.map { _1.type&.value }
+			type_by_identifier[expr.name.value] = params.map { _1.type&.value }
 		end
 
 		def check_call expr
 			return nil unless expr.receiver.is_a? Ore::Identifier_Expr
-			signature = types_by_identifier[expr.receiver.value]
+			signature = type_by_identifier[expr.receiver.value]
 			return nil unless signature.is_a? ::Array
 
 			expr.arguments.each_with_index.filter_map do |arg, i|
@@ -51,9 +51,9 @@ module Ore
 			return nil unless expr.operator.value == '='
 			return nil unless expr.left.respond_to?(:type) && expr.left.type
 
-			declared                             = expr.left.type.value # e.g. "String"
-			types_by_identifier[expr.left.value] = declared
-			inferred                             = infer_type expr.right # e.g. "Number" or nil
+			declared                            = expr.left.type.value # e.g. "String"
+			type_by_identifier[expr.left.value] = declared
+			inferred                            = infer_type expr.right # e.g. "Number" or nil
 
 			return nil if inferred.nil?
 			return nil if declared == inferred

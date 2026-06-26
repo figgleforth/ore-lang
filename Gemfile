@@ -8,3 +8,5 @@ group :development do
 	gem 'rake', '13.3.0'
 	gem 'sqlite3', '2.9.0'
 end
+
+gem "reline", "~> 0.6.3"
