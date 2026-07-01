@@ -54,6 +54,13 @@ Array {
 	map { func;
 		result = []
 		for values
+			```
+			bug: Noticed when testing [].map(), both it and at must be declared in the given anon func or it crashes
+			bin/ore interp 'arr = [1, 2, 3, 4, 5]
+			                arr.map({; it * 2 })'    # missing the declarations that array.ore map function expects. {it,at; ...}
+
+			/src/runtime/interpreter.rb:1293:in 'Ore::Interpreter#interp_func_body': Arguments given, no params declared #<Ore::Call_Expr:0x0000000122e1c3a0 @lexeme=nil, @value=nil, @receiver=#<Ore::Identifier_Expr:0x0000000122aab220 @lexeme=#<struct Ore::Lexeme type=:identifier, value="func", reserved=false, l0=57, c0=16, l1=57, c1=19>, @value="func", @privacy=:public, @kind=:identifier, @l0=57, @c0=16, @l1=57, @c1=19>, @arguments=[#<Ore::Nil_Init_Expr:0x0000000122aa9d80 @lexeme=#<struct Ore::Lexeme type=:identifier, value="it", reserved=false, l0=57, c0=21, l1=57, c1=22>, @value="it", @left=#<Ore::Identifier_Expr:0x0000000122aa9c40 @lexeme=#<struct Ore::Lexeme type=:identifier, value="it", reserved=false, l0=57, c0=21, l1=57, c1=22>, @value="it", @privacy=:public, @kind=:identifier, @l0=57, @c0=21, @l1=57, @c1=22>, @operator=#<struct Ore::Lexeme type=:operator, value="=", reserved=nil, l0=nil, c0=nil, l1=nil, c1=nil>, @right=#<Ore::Identifier_Expr:0x0000000122aa9600 @lexeme=nil, @value="nil", @kind=:identifier, @privacy=:public>, @l0=57, @c0=21, @l1=57, @c1=22>, #<Ore::Identifier_Expr:0x0000000122aa7800 @lexeme=#<struct Ore::Lexeme type=:identifier, value="at", reserved=false, l0=57, c0=25, l1=57, c1=26>, @value="at", @privacy=:public, @kind=:identifier, @l0=57, @c0=25, @l1=57, @c1=26>], @l0=57, @c0=16, @l1=57, @c1=19> (RuntimeError)
+			```
 			result.push(func(it, at))
 		end
 		result
